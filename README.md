@@ -1,9 +1,11 @@
 
 # You Only Plan Once
 
-Paper: [You Only Plan Once: A Learning-Based One-Stage Planner With Guidance Learning](https://ieeexplore.ieee.org/document/10528860)
+Original Paper: [You Only Plan Once: A Learning-Based One-Stage Planner With Guidance Learning](https://ieeexplore.ieee.org/document/10528860)
 
-Video of this paper can be found: [YouTube](https://youtu.be/m7u1MYIuIn4), [bilibili](https://www.bilibili.com/video/BV15M4m1d7j5)
+Improvements and Applications: [YOPOv2-Tracker: An End-to-End Agile Tracking and Navigation Framework from Perception to Action](https://arxiv.org/html/2505.06923v1)
+
+Video of the paper: [YouTube](https://youtu.be/m7u1MYIuIn4), [bilibili](https://www.bilibili.com/video/BV15M4m1d7j5)
 
 Some realworld experiment: [YouTube](https://youtu.be/LHvtbKmTwvE), [bilibili](https://www.bilibili.com/video/BV1jBpve5EkP)
 
@@ -15,7 +17,7 @@ Some realworld experiment: [YouTube](https://youtu.be/LHvtbKmTwvE), [bilibili](h
   </tr>
 </table>
 
-**Faster and Simpler:** The code is greatly simplified and refactored in Python/PyTorch. We also replaced the simulator with our CUDA-accelerated randomized environment, which is faster, lightweight, and boundless. For the stable version consistent with our paper, please refer to the main branch.
+**Faster and Simpler:** The code is greatly simplified and refactored in Python/PyTorch. We also replaced the simulator with our CUDA-accelerated randomized environment, which is faster, lightweight, and boundless. For the stable version consistent with our paper, please refer to the [main](https://github.com/TJU-Aerial-Robotics/YOPO/tree/main) branch.
 
 ### Hardware:
 Our drone designed by [@Mioulo](https://github.com/Mioulo) is also open-source. The hardware components are listed in [hardware_list.pdf](hardware/hardware_list.pdf), and the SolidWorks file of carbon fiber frame can be found in [/hardware](hardware/).
@@ -107,12 +109,18 @@ python test_yopo_ros.py --trial=1 --epoch=50
 
 **4. Visualization**
 
-Start the RVIZ to visualize the images and trajectory.
-You can click the `2D Nav Goal` on RVIZ as the goal (the map is infinite so the goal is freely), just like the following GIF.
+Start the RVIZ to visualize the images and trajectory. 
 ```
 cd YOPO
 rviz -d yopo.rviz
 ```
+
+Left: Random Forest(maze_type=5); Right: 3D Perlin (maze_type=1).
+<p align="center">
+    <img src="docs/new_env.gif" alt="new_env" />
+</p>
+
+You can click the `2D Nav Goal` on RVIZ as the goal (the map is infinite so the goal is freely), just like the following GIF ( Flightmare Simulator).
 
 <p align="center">
     <img src="docs/click_in_rviz.gif" alt="click_in_rviz" />
@@ -135,7 +143,7 @@ YOPO/
 ├── Controller/
 ├── dataset/
 ```
-You can refer to [config.yaml](Simulator/src/config/config.yaml) for modifications of the sampling state, sensor, and environment. Besides, we use random states for data augmentation, and the distribution can be found in [state_samples](docs/state_samples.png)
+You can refer to [config.yaml](Simulator/src/config/config.yaml) for modifications of the sampling state, sensor, and environment. Besides, we use random `vel/acc/goal` for data augmentation, and the distribution can be found in [state_samples](docs/state_samples.png)
 
 **2. Train the Policy**
 ```
