@@ -115,7 +115,7 @@ cd YOPO
 rviz -d yopo.rviz
 ```
 
-Left: Random Forest(maze_type=5); Right: 3D Perlin (maze_type=1).
+Left: Random Forest (maze_type=5); Right: 3D Perlin (maze_type=1).
 <p align="center">
     <img src="docs/new_env.gif" alt="new_env" />
 </p>
@@ -195,6 +195,9 @@ python test_yopo_ros.py --use_tensorrt=1
 
 + You may want to use the position controller like traditional planners in real flight to make it compatible with your controller. You should change `plan_from_reference: False` to `True` at the end of `test_yopo_ros.py`. You can test the changes in simulation using the position controller: `roslaunch so3_quadrotor_simulator simulator_position_control.launch
 `
+
+## RKNN Deployment
+On the RK3566 clip (only 1 TOPS NPU), after deploying with RKNN and INT8 quantization, inference takes only about 20 ms (backbone: ResNet-14). The update of deployment on RK3566 or RK3588 is coming soon.
 
 ## Finally
 We are still working on improving and refactoring the code to improve the readability, reliability, and efficiency. For any technical issues, please feel free to contact me (lqzx1998@tju.edu.cn) 😀 We are very open and enjoy collaboration!
