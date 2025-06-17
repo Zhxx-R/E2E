@@ -85,6 +85,7 @@ You can test the policy using pre-trained weights we provide at `YOPO/saved/YOPO
 For detailed introduction about the controller, please refer to [Controller_Introduction](Controller/src/readme.md)
 ```
 cd Controller
+source devel/setup.bash
 roslaunch so3_quadrotor_simulator simulator_attitude_control.launch
 ```
 **2. Start the Environment and Sensors Simulator**
@@ -92,6 +93,7 @@ roslaunch so3_quadrotor_simulator simulator_attitude_control.launch
 For detailed introduction about the simulator, please refer to [Simulator_Introduction](Simulator/src/readme.md). Example of a random forest can be found in [random_forest.png](docs/random_forest.png)
 ```
 cd Simulator
+source devel/setup.bash
 rosrun sensor_simulator sensor_simulator_cuda
 ```
 
@@ -133,6 +135,7 @@ You can click the `2D Nav Goal` on RVIZ as the goal (the map is infinite so the 
 For efficiency, we proactively collect dataset (images, states, and map) by randomly resetting the drone's states (positions and orientations). It only takes 1–2 minutes to collect 100,000 samples, and you only need to collect once.
 ```
 cd Simulator
+source devel/setup.bash
 rosrun sensor_simulator dataset_generator
 ```
 The data will be saved at `./dataset`:
