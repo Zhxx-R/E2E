@@ -26,7 +26,7 @@ class YOPODataset(Dataset):
         self.v_std = np.array([cfg["vx_std_unit"], cfg["vy_std_unit"], cfg["vz_std_unit"]])
         self.a_mean = np.array([cfg["ax_mean_unit"], cfg["ay_mean_unit"], cfg["az_mean_unit"]])
         self.a_std = np.array([cfg["ax_std_unit"], cfg["ay_std_unit"], cfg["az_std_unit"]])
-        self.goal_length = cfg["goal_length"]
+        self.goal_length = 2.0 * cfg['radio_range']
         self.goal_pitch_std = cfg["goal_pitch_std"]
         self.goal_yaw_std = cfg["goal_yaw_std"]
         if mode == 'train': self.print_data()
@@ -127,6 +127,10 @@ class YOPODataset(Dataset):
         goal_pitch_angle, goal_yaw_angle = np.radians(goal_pitch_angle), np.radians(goal_yaw_angle)
         goal_w_dir = np.array([np.cos(goal_yaw_angle) * np.cos(goal_pitch_angle),
                                np.sin(goal_yaw_angle) * np.cos(goal_pitch_angle), np.sin(goal_pitch_angle)])
+        # 10% probability to generate a nearby goal (× goal_length is actual length)
+        random_near = np.random.rand()
+        if random_near < 0.1:
+            goal_w_dir = random_near * 10 * goal_w_dir
         return self.goal_length * goal_w_dir
 
     def print_data(self):

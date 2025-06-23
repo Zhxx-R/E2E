@@ -41,8 +41,7 @@ az_mean_unit: 0.0
 ax_std_unit: 0.4
 ay_std_unit: 0.4
 az_std_unit: 0.3
-goal_length: 10.0
-goal_pitch_std: 10.0
+goal_pitch_std: 10.0  # clip goal_length to: 2 * radio_range; 10% probability [0, 2 * radio_range]
 goal_yaw_std: 20.0
 
 # extend the map to avoid trajectory exceeding bounds (especially in z-axis) and treating the sky outside the map as obstacle

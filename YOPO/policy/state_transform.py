@@ -10,6 +10,7 @@ class StateTransform:
         base_dir = os.path.dirname(os.path.abspath(__file__))
         cfg = YAML().load(open(os.path.join(base_dir, "../config/traj_opt.yaml"), 'r'))
         self.lattice_primitive = LatticePrimitive.get_instance(cfg)
+        self.goal_length = 2.0 * cfg['radio_range']
 
     def pred_to_endstate(self, endstate_pred: torch.Tensor) -> torch.Tensor:
         """
@@ -112,7 +113,12 @@ class StateTransform:
     def normalize_obs(self, vel_acc_goal):
         vel_acc_goal[:, 0:3] = vel_acc_goal[:, 0:3] / self.lattice_primitive.vel_max
         vel_acc_goal[:, 3:6] = vel_acc_goal[:, 3:6] / self.lattice_primitive.acc_max
-        vel_acc_goal[:, 6:9] = vel_acc_goal[:, 6:9] / (vel_acc_goal[:, 6:9].norm(p=2, dim=1, keepdim=True) + 1e-8)
+        vel_acc_goal[:, 6:9] = vel_acc_goal[:, 6:9] / self.goal_length
+
+        # Clamp the goal direction to unit length
+        goal_norm_length = vel_acc_goal[:, 6:9].norm(dim=1, keepdim=True)
+        scaling = goal_norm_length.clamp(max=1.0) / (goal_norm_length + 1e-8)
+        vel_acc_goal[:, 6:9] = vel_acc_goal[:, 6:9] * scaling
         return vel_acc_goal
 
 
