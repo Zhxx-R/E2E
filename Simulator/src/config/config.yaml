@@ -20,7 +20,7 @@ expand_y_times: 0      # y方向复制次数（cuda版不使用）
 occupy_threshold: 0    # 大于多少个点才认为占据（cpu版不使用）
 
 # 2.2 随机地图
-seed: 1
+seed: 2
 x_length: 60           # 真正随机范围(XY更大范围处为其镜像)
 y_length: 60
 z_length: 15

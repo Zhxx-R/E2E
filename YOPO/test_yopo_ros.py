@@ -353,7 +353,7 @@ def main():
     print("load weight from:", weight)
 
     settings = {'use_tensorrt': args.use_tensorrt,
-                'goal': [40, 40, 2],     # 目标点位置
+                'goal': [50, 0, 2],      # 目标点位置
                 'env': 'simulation',     # 深度图来源 ('435' or 'simulation', 和深度单位有关)
                 'pitch_angle_deg': -0,   # 相机俯仰角(仰为负)
                 'odom_topic': '/sim/odom',                   # 里程计话题

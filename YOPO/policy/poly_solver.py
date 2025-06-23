@@ -59,65 +59,71 @@ class Polys5Solver:
         return result.flatten()
 
 
-def calculate_yaw(vel_dir, goal_dir, last_yaw_, dt, max_yaw_rate=0.3):
+def calculate_yaw(vel_dir, goal_dir, last_yaw, dt, max_yaw_rate=0.3):
     YAW_DOT_MAX_PER_SEC = max_yaw_rate * np.pi
-    # Normalize direction of velocity
+    # Direction of velocity
     vel_dir = vel_dir / (np.linalg.norm(vel_dir) + 1e-5)
 
     # Direction of goal
     goal_dist = np.linalg.norm(goal_dir)
     goal_dir = goal_dir / (goal_dist + 1e-5)  # Prevent division by zero
 
+    # Dynamically adjust weights between goal and velocity directions in yaw planning
+    goal_yaw = np.arctan2(goal_dir[1], goal_dir[0])
+    delta_yaw = goal_yaw - last_yaw
+    delta_yaw = (delta_yaw + np.pi) % (2 * np.pi) - np.pi  # wrap to [-π, π]
+    weight = 6 * abs(delta_yaw) / np.pi  #  weight ∈ 6 * [0, 1]  equal weight at 30°, goal weight increases as angle grows
+
     # Desired direction
-    dir_des = vel_dir + goal_dir
+    dir_des = vel_dir + weight * goal_dir
 
     # Temporary yaw calculation
-    yaw_temp = np.arctan2(dir_des[1], dir_des[0]) if goal_dist > 0.2 else last_yaw_
+    yaw_temp = np.arctan2(dir_des[1], dir_des[0]) if goal_dist > 0.2 else last_yaw
     max_yaw_change = YAW_DOT_MAX_PER_SEC * dt
 
     # Logic for yaw adjustment
-    if yaw_temp - last_yaw_ > np.pi:
-        if yaw_temp - last_yaw_ - 2 * np.pi < -max_yaw_change:
-            yaw = last_yaw_ - max_yaw_change
+    if yaw_temp - last_yaw > np.pi:
+        if yaw_temp - last_yaw - 2 * np.pi < -max_yaw_change:
+            yaw = last_yaw - max_yaw_change
             if yaw < -np.pi:
                 yaw += 2 * np.pi
             yawdot = -YAW_DOT_MAX_PER_SEC
         else:
             yaw = yaw_temp
-            if yaw - last_yaw_ > np.pi:
+            if yaw - last_yaw > np.pi:
                 yawdot = -YAW_DOT_MAX_PER_SEC
             else:
-                yawdot = (yaw_temp - last_yaw_) / dt
-    elif yaw_temp - last_yaw_ < -np.pi:
-        if yaw_temp - last_yaw_ + 2 * np.pi > max_yaw_change:
-            yaw = last_yaw_ + max_yaw_change
+                yawdot = (yaw_temp - last_yaw) / dt
+    elif yaw_temp - last_yaw < -np.pi:
+        if yaw_temp - last_yaw + 2 * np.pi > max_yaw_change:
+            yaw = last_yaw + max_yaw_change
             if yaw > np.pi:
                 yaw -= 2 * np.pi
             yawdot = YAW_DOT_MAX_PER_SEC
         else:
             yaw = yaw_temp
-            if yaw - last_yaw_ < -np.pi:
+            if yaw - last_yaw < -np.pi:
                 yawdot = YAW_DOT_MAX_PER_SEC
             else:
-                yawdot = (yaw_temp - last_yaw_) / dt
+                yawdot = (yaw_temp - last_yaw) / dt
     else:
-        if yaw_temp - last_yaw_ < -max_yaw_change:
-            yaw = last_yaw_ - max_yaw_change
+        if yaw_temp - last_yaw < -max_yaw_change:
+            yaw = last_yaw - max_yaw_change
             if yaw < -np.pi:
                 yaw += 2 * np.pi
             yawdot = -YAW_DOT_MAX_PER_SEC
-        elif yaw_temp - last_yaw_ > max_yaw_change:
-            yaw = last_yaw_ + max_yaw_change
+        elif yaw_temp - last_yaw > max_yaw_change:
+            yaw = last_yaw + max_yaw_change
             if yaw > np.pi:
                 yaw -= 2 * np.pi
             yawdot = YAW_DOT_MAX_PER_SEC
         else:
             yaw = yaw_temp
-            if yaw - last_yaw_ > np.pi:
+            if yaw - last_yaw > np.pi:
                 yawdot = -YAW_DOT_MAX_PER_SEC
-            elif yaw - last_yaw_ < -np.pi:
+            elif yaw - last_yaw < -np.pi:
                 yawdot = YAW_DOT_MAX_PER_SEC
             else:
-                yawdot = (yaw_temp - last_yaw_) / dt
+                yawdot = (yaw_temp - last_yaw) / dt
 
     return yaw, yawdot
