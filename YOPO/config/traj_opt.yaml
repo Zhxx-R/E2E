@@ -1,6 +1,7 @@
-# IMPORTANT PARAM: actual velocity in training / test
+# IMPORTANT PARAM: actual velocity in training / testing
 velocity: 6.0
-# used to align the vel/acc, if vel*n then acc*n*n
+# used to align the vel/acc, ensure consistency between testing and training.
+# during testing, if vel*n then acc*n*n, please refer to ../policy/primitive.py
 vel_align: 6.0
 acc_align: 6.0
 

@@ -19,9 +19,9 @@ class GuidanceLoss(nn.Module):
             Df: fixed parameters: (batch_size, 3, 3) → [px, vx, ax; py, vy, ay; pz, vz, az]
             goal: (batch_size, 3)
         Returns:
-            similarity: (batch_size) → guidance loss
+            guidance_loss: (batch_size) → guidance loss
 
-        GuidanceLoss: Projection length of the trajectory onto the goal direction: higher cosine similarity and longer trajectory are preferred
+        GuidanceLoss: distance_loss (better near the goal) or similarity_loss (better during flight) or terminal_aware_similarity_loss (balanced)
         """
         cur_pos = Df[:, :, 0]
         end_pos = Dp[:, :, 0]
@@ -79,7 +79,7 @@ class GuidanceLoss(nn.Module):
         traj_dir_proj = similarity.unsqueeze(1) * goal_dir_norm  # [B, 3]
         perp_component = (traj_dir - traj_dir_proj).norm(dim=1)  # [B]
 
-        perp_weight = 2 * (self.goal_length - goal_length) / self.goal_length   # [B]
-        perp_weight[perp_weight.abs() < 1e-4] = 0.0  # eliminate tiny numerical errors for stability
-        similarity_loss = th.abs(goal_length - similarity) + perp_weight * perp_component
+        perp_weight = ((self.goal_length - goal_length) / self.goal_length).clamp(min=0.0, max=0.6)   # [B]
+        perp_weight[perp_weight < 1e-4] = 0.0  # eliminate tiny numerical errors for stability
+        similarity_loss = (1 - perp_weight) * th.abs(goal_length - similarity) + perp_weight * perp_component
         return similarity_loss
