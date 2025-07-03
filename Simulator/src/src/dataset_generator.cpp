@@ -131,7 +131,7 @@ int main(int argc, char **argv)
     std::cout << "地图范围 (m): "
               << "X: [" << -sizeX * resolution / 2.0 << ", " << sizeX * resolution / 2.0 << "], "
               << "Y: [" << -sizeY * resolution / 2.0 << ", " << sizeY * resolution / 2.0 << "], "
-              << "Z: [" << -sizeZ * resolution / 2.0 << ", " << sizeZ * resolution / 2.0 << "]" << std::endl;
+              << "Z: [" << 0 << ", " << sizeZ * resolution << "]" << std::endl;
 
     std::cout << "采集范围 (m): "
               << "X: [" << x_min << ", " << x_min + x_range << "], "
