@@ -206,3 +206,13 @@ On the RK3566 clip (only 1 TOPS NPU), after deploying with RKNN and INT8 quantiz
 We are still working on improving and refactoring the code to improve the readability, reliability, and efficiency. For any technical issues, please feel free to contact me (lqzx1998@tju.edu.cn) 😀 We are very open and enjoy collaboration!
 
 If you find this work useful or interesting, please kindly give us a star ⭐; If our repository supports your academic projects, please cite our paper. Thank you!
+
+```
+@article{YOPO,
+  title={You Only Plan Once: A Learning-based One-stage Planner with Guidance Learning},
+  author={Lu, Junjie and Zhang, Xuewei and Shen, Hongming and Xu, Liwen and Tian, Bailing},
+  journal={IEEE Robotics and Automation Letters},
+  year={2024},
+  publisher={IEEE}
+}
+```
