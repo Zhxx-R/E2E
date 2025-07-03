@@ -152,8 +152,14 @@ class YopoNet:
         # 1. Depth Image Process
         try:
             depth = self.bridge.imgmsg_to_cv2(data, "32FC1")
-        except:
-            print("CV_bridge ERROR: Possible solutions may be found at https://github.com/TJU-Aerial-Robotics/YOPO/issues/2")
+        except Exception as e1:
+            try:
+                assert data.encoding == "32FC1", f"Expected encoding '32FC1', got {data.encoding}"
+                depth = np.frombuffer(data.data, dtype=np.float32).reshape(data.height, data.width)
+            except  Exception as e2:
+                print(f"\033[91mBoth cv_bridge and numpy fallback failed:\ncv_bridge error: {e1}\nnumpy error: {e2}\033[0m")
+                print("Possible solutions may be found at https://github.com/TJU-Aerial-Robotics/YOPO/issues/2")
+                return
 
         time0 = time.time()
         if depth.shape[0] != self.height or depth.shape[1] != self.width:
@@ -182,6 +188,8 @@ class YopoNet:
         endstate_pred, score_pred = self.policy(depth_input, obs_input)
         endstate_pred, score_pred = endstate_pred.cpu().numpy(), score_pred.cpu().numpy()
         time3 = time.time()
+
+        # 3. Post-Processing
         # Replacing PyTorch operation on CUDA with NumPy operation on CPU (speed increased by 10x)
         endstate, score = self.process_output(endstate_pred, score_pred, return_all_preds=self.visualize)
         # Vectorization: transform the prediction(P V A in body frame) to the world frame with the attitude (without the position)
