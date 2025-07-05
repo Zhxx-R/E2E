@@ -5,10 +5,10 @@ velocity: 6.0
 vel_align: 6.0
 acc_align: 6.0
 
-# IMPORTANT PARAM: weight of penalties (6m/s)
+# IMPORTANT PARAM: weight of penalties (for unit speed)
 wg: 0.1    # guidance
-ws: 0.0015 # smoothness
-wc: 0.5    # collision
+ws: 10.0   # smoothness
+wc: 0.1    # collision
 
 # dataset
 dataset_path: "../dataset"
@@ -29,18 +29,18 @@ radio_num: 1        # only support 1 currently
 d0: 1.2
 r: 0.6
 
-# distribution parameters for unit state sampling (no need to adjust)
-vx_mean_unit: 0.5
+# distribution parameters for unit state sampling
+vx_mean_unit: 0.4
 vy_mean_unit: 0.0
 vz_mean_unit: 0.0
-vx_std_unit: 1.7
+vx_std_unit: 2.0
 vy_std_unit: 0.45
 vz_std_unit: 0.3
 ax_mean_unit: 0.0
 ay_mean_unit: 0.0
 az_mean_unit: 0.0
-ax_std_unit: 0.4
-ay_std_unit: 0.4
+ax_std_unit: 0.5
+ay_std_unit: 0.5
 az_std_unit: 0.3
 goal_pitch_std: 10.0  # clip goal_length to: 2 * radio_range; 10% probability [0, 2 * radio_range]
 goal_yaw_std: 20.0

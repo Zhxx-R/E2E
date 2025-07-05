@@ -18,8 +18,8 @@ class YOPODataset(Dataset):
         self.width = int(cfg["image_width"])
         # ramdom state: x-direction: log-normal distribution, yz-direction: normal distribution
         scale = cfg["velocity"] / cfg["vel_align"]
-        self.vel_scale = scale * cfg["vel_align"]
-        self.acc_scale = scale * scale * cfg["acc_align"]
+        self.vel_max = scale * cfg["vel_align"]
+        self.acc_max = scale * scale * cfg["acc_align"]
         self.vx_lognorm_mean = np.log(1 - cfg["vx_mean_unit"])
         self.vx_logmorm_sigma = np.log(cfg["vx_std_unit"])
         self.v_mean = np.array([cfg["vx_mean_unit"], cfg["vy_mean_unit"], cfg["vz_mean_unit"]])
@@ -106,18 +106,18 @@ class YOPODataset(Dataset):
 
     def _get_random_state(self):
         while True:
-            vel = self.vel_scale * (self.v_mean + self.v_std * np.random.randn(3))
+            vel = self.vel_max * (self.v_mean + self.v_std * np.random.randn(3))
             right_skewed_vx = -1
             while right_skewed_vx < 0:
-                right_skewed_vx = self.vel_scale * np.random.lognormal(mean=self.vx_lognorm_mean, sigma=self.vx_logmorm_sigma, size=None)
-                right_skewed_vx = -right_skewed_vx + 1.2 * self.vel_scale  # * 1.2 to ensure v_max can be sampled
+                right_skewed_vx = self.vel_max * np.random.lognormal(mean=self.vx_lognorm_mean, sigma=self.vx_logmorm_sigma, size=None)
+                right_skewed_vx = -right_skewed_vx + 1.2 * self.vel_max  # * 1.2 to ensure v_max can be sampled
             vel[0] = right_skewed_vx
-            if np.linalg.norm(vel) < 1.2 * self.vel_scale:  # avoid outliers
+            if np.linalg.norm(vel) < 1.2 * self.vel_max:  # avoid outliers
                 break
 
         while True:
-            acc = self.acc_scale * (self.a_mean + self.a_std * np.random.randn(3))
-            if np.linalg.norm(acc) < 1.2 * self.acc_scale:  # avoid outliers
+            acc = self.acc_max * (self.a_mean + self.a_std * np.random.randn(3))
+            if np.linalg.norm(acc) < 1.2 * self.acc_max:  # avoid outliers
                 break
         return vel, acc
 
@@ -136,19 +136,19 @@ class YOPODataset(Dataset):
     def print_data(self):
         import scipy.stats as stats
         # 计算Vx 5% ~ 95% 区间
-        p5 = self.vel_scale * np.exp(stats.norm.ppf(0.05, loc=self.vx_lognorm_mean, scale=self.vx_logmorm_sigma))
-        p95 = self.vel_scale * np.exp(stats.norm.ppf(0.95, loc=self.vx_lognorm_mean, scale=self.vx_logmorm_sigma))
+        p5 = self.vel_max * np.exp(stats.norm.ppf(0.05, loc=self.vx_lognorm_mean, scale=self.vx_logmorm_sigma))
+        p95 = self.vel_max * np.exp(stats.norm.ppf(0.95, loc=self.vx_lognorm_mean, scale=self.vx_logmorm_sigma))
 
-        v_lower = self.vel_scale * (self.v_mean - 2 * self.v_std)
-        v_upper = self.vel_scale * (self.v_mean + 2 * self.v_std)
-        v_lower[0] = -p95 + 1.2 * self.vel_scale
-        v_upper[0] = -p5 + 1.2 * self.vel_scale
+        v_lower = self.vel_max * (self.v_mean - 2 * self.v_std)
+        v_upper = self.vel_max * (self.v_mean + 2 * self.v_std)
+        v_lower[0] = max(-p95 + 1.2 * self.vel_max, 0)
+        v_upper[0] = -p5 + 1.2 * self.vel_max
 
-        a_lower = self.acc_scale * (self.a_mean - 2 * self.a_std)
-        a_upper = self.acc_scale * (self.a_mean + 2 * self.a_std)
+        a_lower = self.acc_max * (self.a_mean - 2 * self.a_std)
+        a_upper = self.acc_max * (self.a_mean + 2 * self.a_std)
 
         print("----------------- Sampling State --------------------")
-        print("| X-Y-Z | Vel 90% Range(m/s)  | Acc 90% Range(m/s2) |")
+        print("| X-Y-Z | Vel 95% Range(m/s)  | Acc 95% Range(m/s2) |")
         print("|-------|---------------------|---------------------|")
         for i in range(3):
             print(f"|  {i:^4} | {v_lower[i]:^9.1f}~{v_upper[i]:^9.1f} |"

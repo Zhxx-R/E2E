@@ -18,19 +18,21 @@ class YOPOLoss(nn.Module):
         """
         super(YOPOLoss, self).__init__()
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        self.cfg = YAML().load(open(os.path.join(base_dir, "../config/traj_opt.yaml"), 'r'))
-        self.sgm_time = 2 * self.cfg["radio_range"] / self.cfg["velocity"]
+        cfg = YAML().load(open(os.path.join(base_dir, "../config/traj_opt.yaml"), 'r'))
+        self.sgm_time = 2 * cfg["radio_range"] / cfg["velocity"]
         self.device = th.device("cuda" if th.cuda.is_available() else "cpu")
         self._C, self._B, self._L, self._R = self.qp_generation()
         self._R = self._R.to(self.device)
         self._L = self._L.to(self.device)
-        self.smoothness_weight = self.cfg["ws"]
-        self.safety_weight = self.cfg["wc"]
-        self.goal_weight = self.cfg["wg"]
+        vel_scale = cfg["velocity"] / 1.0
+        self.smoothness_weight = cfg["ws"]
+        self.safety_weight = cfg["wc"]
+        self.goal_weight = cfg["wg"]
+        self.denormalize_weight(vel_scale)
         self.smoothness_loss = SmoothnessLoss(self._R)
         self.safety_loss = SafetyLoss(self._L, self.sgm_time)
         self.goal_loss = GuidanceLoss()
-        print("---------- Loss ---------")
+        print("------ Actual Loss ------")
         print(f"| {'smooth':<12} = {self.smoothness_weight:6.4f} |")
         print(f"| {'safety':<12} = {self.safety_weight:6.4f} |")
         print(f"| {'goal':<12} = {self.goal_weight:6.4f} |")
@@ -67,6 +69,20 @@ class YOPOLoss(nn.Module):
         _R = _C @ (B_T) @ Q @ B @ Ct
 
         return _C, B, _L, _R
+
+    def denormalize_weight(self, vel_scale):
+        """
+        Denormalize the cost weight to ensure consistency across different speeds to simplify parameter tuning.
+        smoothness cost: time integral of jerk² is used as a smoothness cost.
+                         If the speed is scaled by n, the cost is scaled by n⁵ (because jerk * n⁶ and time * 1/n).
+        safety cost:     time integral of the distance from trajectory to obstacles.
+                         If the speed is scaled by n, the cost is scaled by 1/n (because time * 1/n).
+        goal cost:       projection of the trajectory onto goal direction.
+                         Independent of speed.
+        """
+        self.smoothness_weight = self.smoothness_weight / vel_scale ** 5
+        self.safety_weight = self.safety_weight * vel_scale
+        self.goal_weight = self.goal_weight
 
     def forward(self, state, prediction, goal, map_id):
         """
