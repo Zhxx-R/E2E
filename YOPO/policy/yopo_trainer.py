@@ -39,9 +39,6 @@ class YopoTrainer:
         # params
         self.traj_num = cfg['traj_num']
 
-        # loss
-        self.yopo_loss = YOPOLoss()
-
         # network
         print("Loading network...")
         self.policy = YopoNetwork()
@@ -52,6 +49,9 @@ class YopoTrainer:
             print("Checkpoint ", checkpoint_path, " loaded successfully")
         except FileNotFoundError:
             print("Training from scratch")
+
+        # loss
+        self.yopo_loss = YOPOLoss()
 
         # optimizer
         self.optimizer = torch.optim.AdamW(self.policy.parameters(), lr=learning_rate, fused=True)
