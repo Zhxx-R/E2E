@@ -1,38 +1,37 @@
-import os
+import os, sys
 import cv2
+import time
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
-from ruamel.yaml import YAML
-import time
 from scipy.spatial.transform import Rotation as R
 from sklearn.model_selection import train_test_split
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from config.config import cfg
 
 
 class YOPODataset(Dataset):
     def __init__(self, mode='train', val_ratio=0.1):
         super(YOPODataset, self).__init__()
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        cfg = YAML().load(open(os.path.join(base_dir, "../config/traj_opt.yaml"), 'r'))
         # image params
         self.height = int(cfg["image_height"])
         self.width = int(cfg["image_width"])
         # ramdom state: x-direction: log-normal distribution, yz-direction: normal distribution
-        scale = cfg["velocity"] / cfg["vel_align"]
-        self.vel_max = scale * cfg["vel_align"]
-        self.acc_max = scale * scale * cfg["acc_align"]
+        self.vel_max = cfg["vel_max_train"]
+        self.acc_max = cfg["acc_max_train"]
         self.vx_lognorm_mean = np.log(1 - cfg["vx_mean_unit"])
         self.vx_logmorm_sigma = np.log(cfg["vx_std_unit"])
         self.v_mean = np.array([cfg["vx_mean_unit"], cfg["vy_mean_unit"], cfg["vz_mean_unit"]])
         self.v_std = np.array([cfg["vx_std_unit"], cfg["vy_std_unit"], cfg["vz_std_unit"]])
         self.a_mean = np.array([cfg["ax_mean_unit"], cfg["ay_mean_unit"], cfg["az_mean_unit"]])
         self.a_std = np.array([cfg["ax_std_unit"], cfg["ay_std_unit"], cfg["az_std_unit"]])
-        self.goal_length = 2.0 * cfg['radio_range']
+        self.goal_length = cfg['goal_length']
         self.goal_pitch_std = cfg["goal_pitch_std"]
         self.goal_yaw_std = cfg["goal_yaw_std"]
         if mode == 'train': self.print_data()
 
         # dataset
         print("Loading", mode, "dataset, it may take a while...")
+        base_dir = os.path.dirname(os.path.abspath(__file__))
         data_dir = os.path.join(base_dir, "../", cfg["dataset_path"])
         self.img_list, self.map_idx, self.positions, self.quaternions = [], [], np.empty((0, 3), dtype=np.float32), np.empty((0, 4), dtype=np.float32)
 

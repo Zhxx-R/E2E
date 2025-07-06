@@ -1,16 +1,13 @@
-import os
 import torch.nn as nn
 import torch as th
 import torch.nn.functional as F
-from ruamel.yaml import YAML
+from config.config import cfg
 
 
 class GuidanceLoss(nn.Module):
     def __init__(self):
         super(GuidanceLoss, self).__init__()
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        cfg = YAML().load(open(os.path.join(base_dir, "../config/traj_opt.yaml"), 'r'))
-        self.goal_length = 2.0 * cfg['radio_range']
+        self.goal_length = cfg['goal_length']
 
     def forward(self, Df, Dp, goal):
         """

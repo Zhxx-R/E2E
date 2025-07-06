@@ -24,10 +24,9 @@ def parser():
     return parser
 
 
-def main():
+if __name__ == "__main__":
     args = parser().parse_args()
-    # set random seed
-    configure_random_seed(0)
+    configure_random_seed(0)    # set random seed
 
     # save the configuration and other files
     log_dir = os.path.dirname(os.path.abspath(__file__)) + "/saved"
@@ -46,7 +45,3 @@ def main():
     trainer.train(epoch=50)
 
     print("Run YOPO Finish!")
-
-
-if __name__ == "__main__":
-    main()

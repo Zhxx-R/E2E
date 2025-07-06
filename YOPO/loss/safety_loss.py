@@ -5,23 +5,21 @@ import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
 import open3d as o3d
-from ruamel.yaml import YAML
 from scipy.ndimage import distance_transform_edt
+from config.config import cfg
 
 
 class SafetyLoss(nn.Module):
-    def __init__(self, L, sgm_time):
+    def __init__(self, L):
         super(SafetyLoss, self).__init__()
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        cfg = YAML().load(open(os.path.join(base_dir, "../config/traj_opt.yaml"), 'r'))
-        self.traj_num = cfg['horizon_num'] * cfg['vertical_num']
+        self.traj_num = cfg['traj_num']
         self.map_expand_min = np.array(cfg['map_expand_min'])
         self.map_expand_max = np.array(cfg['map_expand_max'])
         self.d0 = cfg["d0"]
         self.r = cfg["r"]
 
         self._L = L
-        self.sgm_time = sgm_time
+        self.sgm_time = cfg["sgm_time"]
         self.eval_points = 30
         self.device = self._L.device
 
@@ -31,6 +29,7 @@ class SafetyLoss(nn.Module):
         self.max_bounds = None  # shape: (N, 3)
         self.sdf_shapes = None  # shape: (1, 3)
         print("Building ESDF map...")
+        base_dir = os.path.dirname(os.path.abspath(__file__))
         data_dir = os.path.join(base_dir, "../", cfg["dataset_path"])
         self.sdf_maps = self.get_sdf_from_ply(data_dir)
         print("Map built!")

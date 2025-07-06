@@ -7,13 +7,13 @@
           python setup.py install
 """
 
-import argparse
 import os
+import argparse
+import time
 import numpy as np
 import torch
 from torch2trt import torch2trt
-from ruamel.yaml import YAML
-import time
+from config.config import cfg
 from policy.yopo_network import YopoNetwork
 
 
@@ -25,16 +25,15 @@ def parser():
     return parser
 
 
-def main():
+if __name__ == "__main__":
     args = parser().parse_args()
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    cfg = YAML().load(open(os.path.join(base_dir, "config/traj_opt.yaml"), 'r'))
     weight = base_dir + "/saved/YOPO_{}/epoch{}.pth".format(args.trial, args.epoch)
 
     print("Loading Network...")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     state_dict = torch.load(weight, weights_only=True)
-    policy = YopoNetwork(horizon_num=cfg["horizon_num"], vertical_num=cfg["vertical_num"])
+    policy = YopoNetwork()
     policy.load_state_dict(state_dict)
     policy = policy.to(device)
     policy.eval()
@@ -77,6 +76,3 @@ def main():
           f"Transfer Trajectory Error: {traj_error.item():.6f},"
           f"Transfer Score Error: {score_error.item():.6f}")
 
-
-if __name__ == "__main__":
-    main()

@@ -13,9 +13,9 @@ import time
 import torch
 import numpy as np
 import argparse
-from ruamel.yaml import YAML
 from scipy.spatial.transform import Rotation as R
 
+from config.config import cfg
 from control_msg import PositionCommand
 from policy.yopo_network import YopoNetwork
 from policy.poly_solver import *
@@ -32,8 +32,7 @@ class YopoNet:
         self.config = config
         rospy.init_node('yopo_net', anonymous=False)
         # load params
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        cfg = YAML().load(open(os.path.join(base_dir, "config/traj_opt.yaml"), 'r'))
+        cfg["train"] = False
         self.height = cfg['image_height']
         self.width = cfg['image_width']
         self.min_dis, self.max_dis = 0.04, 20.0
@@ -64,7 +63,7 @@ class YopoNet:
         self.lock = Lock()
         self.last_control_msg = None
         self.state_transform = StateTransform()
-        self.lattice_primitive = LatticePrimitive.get_instance(cfg)
+        self.lattice_primitive = LatticePrimitive.get_instance()
         self.traj_time = self.lattice_primitive.segment_time
 
         # eval
@@ -354,7 +353,7 @@ def parser():
     return parser
 
 
-def main():
+if __name__ == "__main__":
     args = parser().parse_args()
     base_dir = os.path.dirname(os.path.abspath(__file__))
     weight = "yopo_trt.pth" if args.use_tensorrt else base_dir + "/saved/YOPO_{}/epoch{}.pth".format(args.trial, args.epoch)
@@ -372,7 +371,3 @@ def main():
                 'visualize': True               # 可视化所有轨迹？(实飞改为False节省计算)
                 }
     YopoNet(settings, weight)
-
-
-if __name__ == "__main__":
-    main()

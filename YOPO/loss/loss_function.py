@@ -1,8 +1,7 @@
-import os
 import math
 import torch as th
 import torch.nn as nn
-from ruamel.yaml import YAML
+from config.config import cfg
 from loss.safety_loss import SafetyLoss
 from loss.smoothness_loss import SmoothnessLoss
 from loss.guidance_loss import GuidanceLoss
@@ -17,20 +16,18 @@ class YOPOLoss(nn.Module):
         df: fixed parameters
         """
         super(YOPOLoss, self).__init__()
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        cfg = YAML().load(open(os.path.join(base_dir, "../config/traj_opt.yaml"), 'r'))
-        self.sgm_time = 2 * cfg["radio_range"] / cfg["velocity"]
+        self.sgm_time = cfg["sgm_time"]
         self.device = th.device("cuda" if th.cuda.is_available() else "cpu")
         self._C, self._B, self._L, self._R = self.qp_generation()
         self._R = self._R.to(self.device)
         self._L = self._L.to(self.device)
-        vel_scale = cfg["velocity"] / 1.0
+        vel_scale = cfg["vel_max_train"] / 1.0
         self.smoothness_weight = cfg["ws"]
         self.safety_weight = cfg["wc"]
         self.goal_weight = cfg["wg"]
         self.denormalize_weight(vel_scale)
         self.smoothness_loss = SmoothnessLoss(self._R)
-        self.safety_loss = SafetyLoss(self._L, self.sgm_time)
+        self.safety_loss = SafetyLoss(self._L)
         self.goal_loss = GuidanceLoss()
         print("------ Actual Loss ------")
         print(f"| {'smooth':<12} = {self.smoothness_weight:6.4f} |")

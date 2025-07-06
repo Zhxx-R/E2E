@@ -2,6 +2,7 @@
 Training Strategy
 supervised learning, imitation learning, testing, rollout
 """
+import os
 import time
 import atexit
 from torch.nn import functional as F
@@ -9,6 +10,7 @@ from rich.progress import Progress
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard.writer import SummaryWriter
 
+from config.config import cfg
 from loss.loss_function import YOPOLoss
 from policy.yopo_network import YopoNetwork
 from policy.yopo_dataset import YOPODataset
@@ -35,10 +37,7 @@ class YopoTrainer:
         self.tensorboard_path = self.get_next_log_path(tensorboard_path)
         self.tensorboard_log = SummaryWriter(log_dir=self.tensorboard_path)
         # params
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        cfg = YAML().load(open(os.path.join(base_dir, "../config/traj_opt.yaml"), 'r'))
-        self.lattice_primitive = LatticePrimitive.get_instance(cfg)
-        self.traj_num = self.lattice_primitive.traj_num
+        self.traj_num = cfg['traj_num']
 
         # loss
         self.yopo_loss = YOPOLoss()

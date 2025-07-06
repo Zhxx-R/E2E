@@ -1,11 +1,12 @@
-# IMPORTANT PARAM: actual velocity in training / testing
+# IMPORTANT: velocity in testing (modifiable)
 velocity: 6.0
-# used to align the vel/acc, ensure consistency between testing and training.
-# during testing, if vel*n then acc*n*n, please refer to ../policy/primitive.py
-vel_align: 6.0
-acc_align: 6.0
 
-# IMPORTANT PARAM: weight of penalties (for unit speed)
+# IMPORTANT: vel_max and acc_max in training
+# not the actual values in testing, ensure consistency between testing and training, please refer to ../policy/primitive.py
+vel_max_train: 6.0
+acc_max_train: 6.0
+
+# IMPORTANT: weight of costs for unit speed (can be visualized in tensorboard)
 wg: 0.1    # guidance
 ws: 10.0   # smoothness
 wc: 0.1    # collision
@@ -15,7 +16,7 @@ dataset_path: "../dataset"
 image_height: 96
 image_width: 160
 
-# trajectory and primitive param (Note: traj_time = 2 * radio / vel_max)
+# trajectory and primitive param (Note: traj_time = 2 * radio / vel_max) (can be visualized in rviz)
 horizon_num: 5
 vertical_num: 3
 horizon_camera_fov: 90.0
@@ -29,7 +30,7 @@ radio_num: 1        # only support 1 currently
 d0: 1.2
 r: 0.6
 
-# distribution parameters for unit state sampling
+# distribution for unit state sampling (can be visualized by 'python ./policy/yopo_dataset.py')
 vx_mean_unit: 0.4
 vy_mean_unit: 0.0
 vz_mean_unit: 0.0

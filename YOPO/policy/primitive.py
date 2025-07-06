@@ -1,16 +1,18 @@
 import torch
 from scipy.spatial.transform import Rotation as R
+from config.config import cfg
 
 
 class LatticeParam:
-    def __init__(self, cfg):
-        ratio = cfg["velocity"] / cfg["vel_align"]
-        self.vel_max = ratio * cfg["vel_align"]
-        self.acc_max = ratio * ratio * cfg["acc_align"]
-        self.segment_time = 2 * cfg["radio_range"] / self.vel_max
+    def __init__(self):
+        ratio = 1.0 if cfg["train"] else cfg["velocity"] / cfg["vel_max_train"]
+        self.vel_max = ratio * cfg["vel_max_train"]
+        self.acc_max = ratio * ratio * cfg["acc_max_train"]
+        self.segment_time = cfg["sgm_time"] / ratio
         self.horizon_num = cfg["horizon_num"]
         self.vertical_num = cfg["vertical_num"]
         self.radio_num = cfg["radio_num"]
+        self.traj_num = cfg["traj_num"]
         self.horizon_fov = cfg["horizon_camera_fov"]
         self.vertical_fov = cfg["vertical_camera_fov"]
         self.horizon_anchor_fov = cfg["horizon_anchor_fov"]
@@ -38,11 +40,9 @@ class LatticePrimitive(LatticeParam):
     """
     _instance = None
 
-    def __init__(self, cfg):
-        super().__init__(cfg)
+    def __init__(self):
+        super().__init__()
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-        self.traj_num = self.vertical_num * self.horizon_num * self.radio_num
 
         if self.horizon_num == 1:
             direction_diff = 0
@@ -105,16 +105,6 @@ class LatticePrimitive(LatticeParam):
         return self.traj_num - id - 1
 
     @classmethod
-    def get_instance(self, cfg):
-        if self._instance is None: self._instance = self(cfg)
+    def get_instance(self):
+        if self._instance is None: self._instance = self()
         return self._instance
-
-
-if __name__ == '__main__':
-    import os
-    from ruamel.yaml import YAML
-
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    cfg = YAML().load(open(os.path.join(base_dir, "../config/traj_opt.yaml"), 'r'))
-    lattice_primitive = LatticePrimitive.get_instance(cfg)
-    print(lattice_primitive.getStateLattice(list(range(lattice_primitive.traj_num))))

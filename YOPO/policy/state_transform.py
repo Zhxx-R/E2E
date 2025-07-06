@@ -1,16 +1,13 @@
-import os
 import torch
 import numpy as np
-from ruamel.yaml import YAML
+from config.config import cfg
 from policy.primitive import LatticePrimitive
 
 
 class StateTransform:
     def __init__(self):
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        cfg = YAML().load(open(os.path.join(base_dir, "../config/traj_opt.yaml"), 'r'))
-        self.lattice_primitive = LatticePrimitive.get_instance(cfg)
-        self.goal_length = 2.0 * cfg['radio_range']
+        self.lattice_primitive = LatticePrimitive.get_instance()
+        self.goal_length = cfg['goal_length']
 
     def pred_to_endstate(self, endstate_pred: torch.Tensor) -> torch.Tensor:
         """
