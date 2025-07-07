@@ -75,6 +75,91 @@ Maps::randomMapGenerate()
 }
 
 void
+Maps::wall()
+{
+  std::default_random_engine eng(info.seed);
+
+  double _resolution = 1 / info.scale;
+
+  double _x_l = -info.sizeX / (2 * info.scale);
+  double _x_h = info.sizeX / (2 * info.scale);
+  double _y_l = -info.sizeY / (2 * info.scale);
+  double _y_h = info.sizeY / (2 * info.scale);
+  double _h_l = 0.3 * info.sizeZ / info.scale;
+  double _h_h = info.sizeZ / info.scale;
+
+  std::uniform_real_distribution<double> rand_x(_x_l, _x_h);
+  std::uniform_real_distribution<double> rand_y(_y_l, _y_h);
+  std::uniform_real_distribution<double> rand_w(_wall_w_l, _wall_w_h);
+  std::uniform_real_distribution<double> rand_h(_h_l, _h_h);
+  std::uniform_real_distribution<float> rand_yaw(-M_PI, M_PI);
+  std::uniform_real_distribution<float> rand_pitch(-M_PI / 10, M_PI / 10);
+
+  pcl::PointXYZ pt_random;
+  for (int i = 0; i < _wall_num; ++i)
+  {
+    float cx = rand_x(eng);
+    float cy = rand_y(eng);
+    float cz = 0.0f;
+    float yaw = rand_yaw(eng);
+    float pitch = rand_pitch(eng);
+    float width = rand_w(eng);
+    float height = rand_h(eng);
+    float thick = _wall_thick;
+
+    int w_steps = std::ceil(width / _resolution);
+    int h_steps = std::ceil(height / _resolution);
+    int t_steps = std::ceil(thick / _resolution);
+
+    float w0 = -width / 2.0f;
+    float h0 = 0.0f;
+    float t0 = -thick / 2.0f;
+
+    float cosy = std::cos(yaw), siny = std::sin(yaw);
+    float cosp = std::cos(pitch), sinp = std::sin(pitch);
+
+    for (int i = 0; i < w_steps; ++i)
+    {
+      for (int j = 0; j < h_steps; ++j)
+      {
+        for (int k = 0; k < t_steps; ++k)
+        {
+          float x_local = w0 + i * _resolution;
+          float y_local = t0 + k * _resolution;
+          float z_local = h0 + j * _resolution;
+
+          float x1 = cosy * x_local - siny * y_local;
+          float y1 = siny * x_local + cosy * y_local;
+          float z1 = z_local;
+
+          float y2 = cosp * y1 - sinp * z1;
+          float z2 = sinp * y1 + cosp * z1;
+          float x2 = x1;
+
+          pcl::PointXYZ pt;
+          pt.x = cx + x2;
+          pt.y = cy + y2;
+          pt.z = cz + z2;
+
+          info.cloud->points.push_back(pt);
+        }
+      }
+    }
+  }
+  pcl::PointCloud<pcl::PointXYZ>::Ptr ground_cloud = generateGround(info.cloud, _resolution);
+  *info.cloud += *ground_cloud;
+
+  if (_wall_ceiling){
+    pcl::PointCloud<pcl::PointXYZ>::Ptr ceiling_cloud = generateGround(info.cloud, _resolution, _h_h);
+    *info.cloud += *ceiling_cloud;
+  }
+  
+  info.cloud->width    = info.cloud->points.size();
+  info.cloud->height   = 1;
+  info.cloud->is_dense = true;
+}
+
+void
 Maps::perlin3D()
 {
   info.cloud->width  = info.sizeX * info.sizeY * info.sizeZ;
@@ -674,6 +759,12 @@ Maps::setParam(const YAML::Node& config)
   add_ceiling = config["add_ceiling"].as<int>();
   window_size_min = config["window_size_min"].as<double>();
   window_size_max = config["window_size_max"].as<double>();
+  // wall
+  _wall_w_l = config["wall_width_min"].as<double>();
+  _wall_w_h = config["wall_width_max"].as<double>();
+  _wall_thick = config["wall_thick"].as<double>();
+  _wall_num = config["wall_number"].as<int>();
+  _wall_ceiling = config["wall_ceiling"].as<int>();
 }
 
 
@@ -702,6 +793,9 @@ Maps::generate(int type)
       break;
     case 6:
       room();
+      break;
+    case 7:
+      wall();
       break;
   }
 }

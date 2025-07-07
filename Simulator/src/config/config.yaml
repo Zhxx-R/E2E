@@ -19,12 +19,12 @@ expand_x_times: 0      # x方向复制次数（cuda版不使用）
 expand_y_times: 0      # y方向复制次数（cuda版不使用）
 occupy_threshold: 0    # 大于多少个点才认为占据（cpu版不使用）
 
-# 2.2 随机地图
+# 2.2 随机地图 ======
 seed: 3
 x_length: 60           # 真正随机范围(XY更大范围处为其镜像)
 y_length: 60
 z_length: 15
-maze_type: 5           # 1: 溶洞 2: 柱子 3:迷宫 5:森林 6:房间  (当前策略支持1,2,5)
+maze_type: 5           # 1: 溶洞 2: 柱子 3:迷宫 5:森林 6:房间 7:墙面  (当前策略支持1,2,5,7)
 # 溶洞
 complexity: 0.02       # 复杂度 0.0-0.5
 fill: 0.1              # 填充率 0.0-0.4
@@ -47,6 +47,12 @@ max_windows: 2         # 每面墙最多窗口数
 window_size_min: 2.0
 window_size_max: 2.8
 add_ceiling: 0         # 是否添加天花板
+# 墙面
+wall_width_min: 0.5
+wall_width_max: 8.0
+wall_thick: 0.5
+wall_number: 100       # 墙面数量
+wall_ceiling: 1        # 是否添加天花板
 
 # 3. 传感器参数 ==============================================================
 camera:

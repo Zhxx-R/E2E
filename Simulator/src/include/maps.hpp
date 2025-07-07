@@ -56,6 +56,11 @@ private:
   int max_windows;
   int add_ceiling;
   double window_size_min, window_size_max;
+  // wall
+  double _wall_w_l, _wall_w_h;
+  double _wall_thick;
+  int    _wall_num;
+  int    _wall_ceiling;
 
   std::uniform_real_distribution<double> dis_window_x, dis_window_z, dis_window_size;
   std::default_random_engine window_eng;
@@ -64,6 +69,7 @@ private:
   void maze2D();
   void randomMapGenerate();
   void Maze3DGen();
+  void wall();
   void recursiveDivision(int xl, int xh, int yl, int yh, Eigen::MatrixXi &maze);
   void recursizeDivisionMaze(Eigen::MatrixXi &maze);
   void optimizeMap();

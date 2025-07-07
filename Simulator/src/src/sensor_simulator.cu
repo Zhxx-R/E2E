@@ -3,12 +3,12 @@
 namespace raycast
 {   
     GridMap::GridMap(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float resolution, int occupy_threshold = 1){
-        
+        const float epsilon = 0.001f;   // 避免数值误差导致 (1)建图空行 (2)边缘点被忽略
         Eigen::Vector4f min_pt, max_pt;
         pcl::getMinMax3D(*cloud, min_pt, max_pt);
-        float length = max_pt(0) - min_pt(0);   // X方向的长度
-        float width  = max_pt(1) - min_pt(1);   // Y方向的宽度
-        float height = max_pt(2) - min_pt(2);   // Z方向的高度
+        float length = max_pt(0) - min_pt(0) + 2 * epsilon;  // 保证各个边界最大值能被取到
+        float width  = max_pt(1) - min_pt(1) + 2 * epsilon;
+        float height = max_pt(2) - min_pt(2) + 2 * epsilon;
         Vector3f origin(min_pt(0), min_pt(1), min_pt(2));
         Vector3f map_size(length, width, height);
         origin_x_ = origin.x;
@@ -30,9 +30,9 @@ namespace raycast
         raycast_step_ = resolution;
 
         std::vector<int> h_map(grid_total_size, 0);
-        // 有时候会有全空的行，加个很小的偏移
+        // 点云全位于体素边界，有时候会有全空的行，加个很小的偏移
         for (size_t i = 0; i < cloud->points.size(); i++) {
-            Vector3f point(cloud->points[i].x + 0.001, cloud->points[i].y + 0.001, cloud->points[i].z + 0.001);
+            Vector3f point(cloud->points[i].x + epsilon, cloud->points[i].y + epsilon, cloud->points[i].z + epsilon);
             int idx = Vox2Idx(Pos2Vox(point));
             if (idx < grid_total_size) {
                 h_map[idx]++;
