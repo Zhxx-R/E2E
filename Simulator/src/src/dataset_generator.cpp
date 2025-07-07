@@ -226,6 +226,7 @@ int main(int argc, char **argv)
             printProgressBar(map_i * image_num + image_i + 1, dataset_num);
         }
         pose_file.close();
+        grid_map.freeGridMap();
     }
 
     std::cout << "\nDataset generation completed!" << std::endl;
