@@ -154,7 +154,7 @@ cd YOPO/
 conda activate yopo
 python train_yopo.py
 ```
-It takes less than 1 hour to train on 100,000 samples for 50 epochs on an RTX 3080 GPU. Besides, we highly recommend binding the process to P-cores  via `taskset -c 1,2,3,4 python train_yopo.py` if your CPU uses a hybrid architecture with P-cores and E-cores. If everything goes well, the training log is as follows:
+It takes less than 1 hour to train on 100,000 samples for 50 epochs on an RTX 3080 GPU and i9-12900K CPU. Besides, we highly recommend binding the process to P-cores  via `taskset -c 1,2,3,4 python train_yopo.py` if your CPU uses a hybrid architecture with P-cores and E-cores. If everything goes well, the training log is as follows:
 
 ```
 cd YOPO/saved

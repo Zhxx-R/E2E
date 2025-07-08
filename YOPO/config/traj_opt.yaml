@@ -7,7 +7,7 @@ vel_max_train: 6.0
 acc_max_train: 6.0
 
 # IMPORTANT: weight of costs for unit speed (can be visualized in tensorboard)
-wg: 0.1    # guidance
+wg: 0.12   # guidance
 ws: 10.0   # smoothness
 wc: 0.1    # collision
 

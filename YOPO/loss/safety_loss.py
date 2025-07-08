@@ -57,10 +57,10 @@ class SafetyLoss(nn.Module):
         # get info from sdf_map
         cost = self.get_distance_cost(pos_batch, map_id)
 
-        cost_dt = (cost * dt).reshape(-1, pos_coe.shape[1])   # [B*H*V, N, 3]
-        cost_colli = cost_dt.sum(dim=-1, keepdim=True)
+        cost_dt = (cost * dt).reshape(-1, pos_coe.shape[1])   # [B*H*V, N]
+        cost_colli = cost_dt.sum(dim=-1)
 
-        return cost_colli.squeeze()
+        return cost_colli
 
     def get_distance_cost(self, pos, map_id):
         """
