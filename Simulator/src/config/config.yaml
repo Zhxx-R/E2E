@@ -49,7 +49,7 @@ window_size_max: 2.8
 add_ceiling: 0         # 是否添加天花板
 # 墙面
 wall_width_min: 0.5
-wall_width_max: 8.0
+wall_width_max: 6.0
 wall_thick: 0.5
 wall_number: 100       # 墙面数量
 wall_ceiling: 1        # 是否添加天花板

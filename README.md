@@ -97,7 +97,7 @@ source devel/setup.bash
 rosrun sensor_simulator sensor_simulator_cuda
 ```
 
-You can refer to [config.yaml](Simulator/src/config/config.yaml) for modifications of the sensor (e.g., camera and LiDAR parameters) and environment (e.g., maze_type and obstacle density). For generalization, the policy trained in forest (type-5) can be zero-shot transferred to 3D Perlin (type-1).
+You can refer to [config.yaml](Simulator/src/config/config.yaml) for modifications of the sensor (e.g., camera and LiDAR parameters) and environment (e.g., scenario type and obstacle density).
 
 **3. Start the YOPO Planner** 
 
@@ -196,10 +196,18 @@ python test_yopo_ros.py --use_tensorrt=1
 **4. Adapt to Your Platform**
 + You need to change `env: simulation` at the end of `test_yopo_ros.py` to `env: 435` (this affects the unit of the depth image), and modify the odometry to your own topic (in the NWU frame).
 
-+ Configure your depth camera to match the training configuration (the pre-trained weights use a 16:9 resolution and a 90° FOV; for RealSense, you can set the resolution to 480×270).
++ Configure your depth camera to match the training configuration (the pre-trained weights use a 16:9 resolution and a 90° FOV; for RealSense, you can set the resolution in launch file to 480×270).
 
 + You may want to use the position controller like traditional planners in real flight to make it compatible with your controller. You should change `plan_from_reference: False` to `True` at the end of `test_yopo_ros.py`. You can test the changes in simulation using the position controller: `roslaunch so3_quadrotor_simulator simulator_position_control.launch
 `
+
+**5. Generalization**
+
+We use random training scenes, images, and states to enhance generalization. Policy trained with ground truth depth images can be zero-shot transferred to stereo cameras and unseen scenarios:
+<p align="center">
+    <img src="docs/sim2real.gif" alt="sim2real" />
+</p>
+
 
 ## RKNN Deployment
 On the RK3566 clip (only 1 TOPS NPU), after deploying with RKNN and INT8 quantization, inference takes only about 20 ms (backbone: ResNet-14). The update of deployment on RK3566 or RK3588 is coming soon.
