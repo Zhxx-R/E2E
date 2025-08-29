@@ -11,7 +11,7 @@ wg: 0.12   # guidance
 ws: 10.0   # smoothness
 wc: 0.1    # collision
 
-# dataset
+# dataset: set image_size = primitive_num × downsampling_factor (×32 for ResNet-18) in each axis
 dataset_path: "../dataset"
 image_height: 96
 image_width: 160
