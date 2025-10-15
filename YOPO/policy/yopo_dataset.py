@@ -31,17 +31,18 @@ class YOPODataset(Dataset):
         if mode == 'train': self.print_data()
 
         # dataset
-        print("Loading", mode, "dataset, it may take a while...")
         base_dir = os.path.dirname(os.path.abspath(__file__))
         data_dir = os.path.join(base_dir, "../", cfg["dataset_path"])
         self.img_list, self.map_idx, self.positions, self.quaternions = [], [], np.empty((0, 3), dtype=np.float32), np.empty((0, 4), dtype=np.float32)
 
         datafolders = [f.path for f in os.scandir(data_dir) if f.is_dir()]
         datafolders.sort(key=lambda x: int(os.path.basename(x)))
-        print("Datafolders:")
-        for folder in datafolders:
-            print("    ", folder)
+        if mode == 'train':
+            print("Datafolders:")
+            for folder in datafolders:
+                print("    ", folder)
 
+        print("Loading", mode, "dataset")
         for data_idx in range(len(datafolders)):
             datafolder = datafolders[data_idx]
 
@@ -75,7 +76,6 @@ class YOPODataset(Dataset):
         print(f"{'Positions'   :<12} | Count: {self.positions.shape[0]:<3} |  Shape: {self.positions.shape[1]}")
         print(f"{'Quaternions' :<12} | Count: {self.quaternions.shape[0]:<3} |  Shape: {self.quaternions.shape[1]}")
         print("==================================================")
-        print(mode.capitalize(), "data loaded!")
 
     def __len__(self):
         return len(self.img_list)
@@ -210,10 +210,11 @@ class YOPODataset(Dataset):
 
 
 if __name__ == '__main__':
+    # plot the random sample
     dataset = YOPODataset()
-    # dataset.plot_sample_distribution()
+    dataset.plot_sample_distribution()
 
-    dataset = YOPODataset()
+    # select the best num_workers
     max_workers = os.cpu_count()
     print(f"\n✅ cpu_count = {max_workers}")
 

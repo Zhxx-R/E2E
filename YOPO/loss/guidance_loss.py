@@ -26,6 +26,8 @@ class GuidanceLoss(nn.Module):
         traj_dir = end_pos - cur_pos  # [B, 3]
         goal_dir = goal - cur_pos  # [B, 3]
 
+        # NOTE: distance_loss performs better in general tasks, while we choose terminal_aware_similarity_loss only for higher speed in large-scale scenario.
+        # guidance_loss = self.distance_loss(traj_dir, goal_dir)
         guidance_loss = self.terminal_aware_similarity_loss(traj_dir, goal_dir)
         return guidance_loss
 

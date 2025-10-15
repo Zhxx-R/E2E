@@ -162,7 +162,7 @@ conda activate yopo
 tensorboard --logdir=./
 ```
 <p align="center">
-    <img src="docs/train_log.png" alt="train_log" width="80%"/>
+    <img src="docs/train_log.png" alt="train_log" width="100%"/>
 </p>
 
 Besides, you can refer to [traj_opt.yaml](YOPO/config/traj_opt.yaml) for modifications of trajectory optimization (e.g. the speed and penalties).
