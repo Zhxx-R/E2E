@@ -57,11 +57,11 @@ class YopoTrainer:
         self.optimizer = torch.optim.AdamW(self.policy.parameters(), lr=learning_rate, fused=True)
         print("Network Loaded! Loading Dataset...")
 
-        # dataset
+        # dataset (you can adjust num_workers according to your training speed)
         self.train_dataloader = DataLoader(YOPODataset(mode='train'), batch_size=self.batch_size, shuffle=True,
-                                           num_workers=1, pin_memory=True)
+                                           num_workers=4, pin_memory=True)
         self.val_dataloader = DataLoader(YOPODataset(mode='valid'), batch_size=self.batch_size, shuffle=False,
-                                         num_workers=1, pin_memory=True)
+                                         num_workers=4, pin_memory=True)
         print("Dataset Loaded!")
 
     def train(self, epoch, save_interval=None):
