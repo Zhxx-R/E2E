@@ -69,7 +69,7 @@ conda deactivate
 cd Controller
 catkin_make
 ```
-Build the environment and sensors simulator
+Build the environment and sensors simulator (if CUDA errors occur, please refer to [Simulator_Introduction](Simulator/src/readme.md))
 ```
 conda deactivate
 cd Simulator

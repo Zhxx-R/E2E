@@ -30,6 +30,9 @@ if("${ARCH_FLAGS}" STREQUAL "")
     "  set(ARCH_FLAGS \"-gencode arch=compute_86,code=sm_86\")"
   )
 endif()
+# If automatic detection fails, you can delete above (cuda_select_nvcc_arch_flags(ARCH_FLAGS) ... endif()) and manually set the architecture flags here
+# Examples (NVIDIA 5060 GPU):
+# set(ARCH_FLAGS "-gencode arch=compute_120,code=sm_120")
 message(WARNING "CUDA Architecture: ${ARCH_FLAGS}")
 set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} ${ARCH_FLAGS}")
 
@@ -53,7 +56,7 @@ include_directories(
         ${OpenCV_INCLUDE_DIRS}
 )
 
-add_executable(sensor_simulator src/test_simulator.cpp src/sensor_simulator.cpp)
+add_executable(sensor_simulator src/test_simulator.cpp src/sensor_simulator.cpp src/maps.cpp src/perlinnoise.cpp)
 target_link_libraries(sensor_simulator ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES} OpenMP::OpenMP_CXX yaml-cpp)
 target_compile_definitions(sensor_simulator PRIVATE CONFIG_FILE_PATH="${CMAKE_SOURCE_DIR}/config/config.yaml")
 

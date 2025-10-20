@@ -11,14 +11,25 @@ sudo apt-get install libyaml-cpp-dev
 ```angular2html
 catkin build
 ```
+注：在CmakeList中采用`cuda_select_nvcc_arch_flags`自动检测，如果遇到编译错误，你需要手动设置CUDA架构，请将CmakeList 25行起：
+```
+cuda_select_nvcc_arch_flags(ARCH_FLAGS)
+...
+endif()
+```
+替换为(5060 GPU是120, 需要根据自己设备设置)：
+```
+set(ARCH_FLAGS "-gencode arch=compute_120,code=sm_120")
+```
 
 ### 3 运行
 ```angular2html
 source devel/setup.bash
-# CPU版本 (已弃用)
-rosrun sensor_simulator sensor_simulator
 # GPU版本 (推荐, RTX 3060 深度输出 > 1000fps)
 rosrun sensor_simulator sensor_simulator_cuda
+
+# CPU版本 (资源占用高，仅供GPU编译失败无法解决时测试)
+rosrun sensor_simulator sensor_simulator
 ```
 
 传感器参数以及点云环境修改见[config](config/config.yaml)，重要参数说明:
@@ -29,13 +40,9 @@ depth_topic: "/depth_image"
 lidar_topic: "/lidar_points"
 # 使用预先构建的点云地图还是随机地图
 random_map: true
-# 点云地图文件
-ply_file:
-# 随机地图配置  
-maze_type: 5   # 1: 溶洞 2: 柱子 3:迷宫 5:森林(也需设置树的点云文件) 6:房间
+# 随机地图配置
+maze_type: 5   # 1: 溶洞 2: 柱子 3:迷宫 5:森林 6:房间
 ```
-
-如果使用预先构建的点云地图，可下载我们收集的一个树林的示例: [谷歌云盘](https://drive.google.com/file/d/1WT3vh0m7Gjn0mt4ri-D35mVDgRCT0mNc/view?usp=sharing)
 
 ### 4 仿真位置发布与简单可视化（可选）
 ```angular2html

@@ -47,10 +47,6 @@ cv::Mat SensorSimulator::renderDepthImage(){
         }
     }
 
-    // 再做一遍插值更接近真实
-    // cv::Mat resized_depth_image;
-    // cv::resize(depth_image, resized_depth_image, cv::Size(48, 27));
-
     return depth_image;
 }
 
@@ -157,7 +153,7 @@ void SensorSimulator::timerLidarCallback(const ros::TimerEvent&) {
     sensor_msgs::PointCloud2 output;
     pcl::toROSMsg(lidar_points, output);
     output.header.stamp = ros::Time::now();
-    output.header.frame_id = "world";
+    output.header.frame_id = "odom";
 
     point_cloud_pub_.publish(output);
 }

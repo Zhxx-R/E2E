@@ -19,6 +19,7 @@
 #include <chrono>
 #include <omp.h>
 #include <yaml-cpp/yaml.h>
+#include "maps.hpp"
 
 class SensorSimulator {
 public:
@@ -52,32 +53,56 @@ public:
         std::string depth_topic = config["depth_topic"].as<std::string>();
         std::string lidar_topic = config["lidar_topic"].as<std::string>();
 
+        // 读取地图参数
         float resolution = config["resolution"].as<float>();
         int expand_y_times = config["expand_y_times"].as<int>();
         int expand_x_times = config["expand_x_times"].as<int>();
-
-        pcl::PointCloud<pcl::PointXYZ>::Ptr orig_cloud(new pcl::PointCloud<pcl::PointXYZ>());
-        printf("1.Reading Point Cloud... \n");
-
-        // if (pcl::io::loadPCDFile("/home/lu/用完删除/test/map.pcd", *cloud) == -1) {
-        //     PCL_ERROR("Couldn't read PLY file \n");
-        //     return;
-        // }
-
-        if (pcl::io::loadPLYFile(ply_file, *orig_cloud) == -1) {
-            PCL_ERROR("Couldn't read PLY file \n");
-            return;
-        }
         
-        printf("2.Processing... \n");
+        bool use_random_map = config["random_map"].as<bool>();
+        int seed = config["seed"].as<int>();
+        int sizeX = config["x_length"].as<int>();
+        int sizeY = config["y_length"].as<int>();
+        int sizeZ = config["z_length"].as<int>();
+        int type = config["maze_type"].as<int>();
+        double scale = 1 / resolution;
+        sizeX = sizeX * scale;
+        sizeY = sizeY * scale;
+        sizeZ = sizeZ * scale;
 
         cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>());
-        *cloud = *orig_cloud;
-        for (int i = 0; i < expand_x_times; ++i) {
-            expand_cloud(cloud, 0);
+        // 生成随机地图
+        if (use_random_map) {
+            printf("1.Generate Random Map... \n");
+            mocka::Maps::BasicInfo info;
+            info.sizeX      = sizeX;
+            info.sizeY      = sizeY;
+            info.sizeZ      = sizeZ;
+            info.seed       = seed;
+            info.scale      = scale;
+            info.cloud      = cloud;
+
+            mocka::Maps map;
+            map.setParam(config);
+            map.setInfo(info);
+            map.generate(type);
+            printf("2.Mapping... \n");
         }
-        for (int i = 0; i < expand_y_times; ++i) {
-            expand_cloud(cloud, 1);
+        else {
+            pcl::PointCloud<pcl::PointXYZ>::Ptr orig_cloud(new pcl::PointCloud<pcl::PointXYZ>());
+            printf("1.Reading Point Cloud... \n");
+            if (pcl::io::loadPLYFile(ply_file, *orig_cloud) == -1) {
+                PCL_ERROR("Couldn't read PLY file \n");
+                return;
+            }
+            
+            printf("2.Processing... \n");
+            *cloud = *orig_cloud;
+            for (int i = 0; i < expand_x_times; ++i) {
+                expand_cloud(cloud, 0);
+            }
+            for (int i = 0; i < expand_y_times; ++i) {
+                expand_cloud(cloud, 1);
+            }
         }
 
         octree = pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>::Ptr(
