@@ -300,9 +300,17 @@ void NetworkControl::imu_callback(const sensor_msgs::Imu &imu)
     Eigen::Vector3d acc(imu.linear_acceleration.x,
                         imu.linear_acceleration.y,
                         imu.linear_acceleration.z);
-    Eigen::Vector3d acc_world = cur_att_ * acc;
-    acc_world(2) -= 9.8;
-    cur_acc_ = acc_world;
+    if (is_simulation_)
+    {
+        cur_acc_ = acc;
+    }
+    else
+    {
+        Eigen::Vector3d acc_world = cur_att_ * acc;
+        acc_world(2) -= 9.8;
+        cur_acc_ = acc_world;
+    }
+
     // so3_controller_.setAcc(acc_world);
 }
 
