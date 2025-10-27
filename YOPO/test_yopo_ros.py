@@ -46,7 +46,7 @@ class YopoNet:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # variables
-        self.bridge = CvBridge()
+        # self.bridge = CvBridge()
         self.odom = Odometry()
         self.odom_init = False
         self.last_yaw = 0.0
@@ -149,18 +149,11 @@ class YopoNet:
         if not self.odom_init: return
 
         # 1. Depth Image Process
-        try:
-            depth = self.bridge.imgmsg_to_cv2(data, "32FC1")
-        except Exception as e1:
-            try:
-                assert data.encoding == "32FC1", f"Expected encoding '32FC1', got {data.encoding}"
-                depth = np.frombuffer(data.data, dtype=np.float32).reshape(data.height, data.width)
-            except  Exception as e2:
-                print(f"\033[91mBoth cv_bridge and numpy fallback failed:\ncv_bridge error: {e1}\nnumpy error: {e2}\033[0m")
-                print("Possible solutions may be found at https://github.com/TJU-Aerial-Robotics/YOPO/issues/2")
-                return
-
         time0 = time.time()
+        # depth = self.bridge.imgmsg_to_cv2(data, "32FC1")
+        assert data.encoding == "32FC1", f"Expected encoding '32FC1', got {data.encoding}"
+        depth = np.frombuffer(data.data, dtype=np.float32).reshape(data.height, data.width)
+
         if depth.shape[0] != self.height or depth.shape[1] != self.width:
             depth = cv2.resize(depth, (self.width, self.height), interpolation=cv2.INTER_NEAREST)
         depth = np.minimum(depth * self.scale, self.max_dis) / self.max_dis
@@ -210,19 +203,7 @@ class YopoNet:
         self.visualize_trajectory(score_pred, endstate_w)
         time5 = time.time()
 
-        if self.verbose:
-            self.time_interpolation = self.time_interpolation + (time1 - time0)
-            self.time_prepare = self.time_prepare + (time2 - time1)
-            self.time_forward = self.time_forward + (time3 - time2)
-            self.time_process = self.time_process + (time4 - time3)
-            self.time_visualize = self.time_visualize + (time5 - time4)
-            self.count = self.count + 1
-            print(f"Time Consuming:"
-                  f"depth-interpolation: {1000 * self.time_interpolation / self.count:.2f}ms;"
-                  f"data-prepare: {1000 * self.time_prepare / self.count:.2f}ms; "
-                  f"network-inference: {1000 * self.time_forward / self.count:.2f}ms; "
-                  f"post-process: {1000 * self.time_process / self.count:.2f}ms;"
-                  f"visualize-trajectory: {1000 * self.time_visualize / self.count:.2f}ms")
+        self.print_time(time0, time1, time2, time3, time4, time5)
 
     def control_pub(self, _timer):
         if self.ctrl_time is None or self.ctrl_time > self.traj_time:
@@ -336,6 +317,39 @@ class YopoNet:
                       PointField('z', 8, PointField.FLOAT32, 1), PointField('intensity', 12, PointField.FLOAT32, 1)]
             point_cloud_msg = point_cloud2.create_cloud(header, fields, points_array)
             self.all_trajs_pub.publish(point_cloud_msg)
+
+    def print_time(self, time0, time1, time2, time3, time4, time5):
+        """
+        Performance reference: PyTorch model should take < 5 ms; TensorRT model should take < 1 ms
+
+        Notes:
+        - Running program and enabling RViz under WSL greatly increase processing time, and Ubuntu does not have these issues
+        - Even with queue_size=1, it may cause message accumulation and lag when processing time exceeds the image frequency
+        """
+        self.time_interpolation = self.time_interpolation + (time1 - time0)
+        self.time_prepare = self.time_prepare + (time2 - time1)
+        self.time_forward = self.time_forward + (time3 - time2)
+        self.time_process = self.time_process + (time4 - time3)
+        self.time_visualize = self.time_visualize + (time5 - time4)
+        self.count = self.count + 1
+
+        total_time = (time5 - time0) * 1000
+        tolerance = 30.0
+        if total_time > tolerance:
+            rospy.logwarn(f"Warn: Processing time {(time5 - time0) * 1000:.2f} ms exceeds {tolerance} ms, may cause message lag!")
+            print(f"Current Time Consuming:"
+                  f"depth-interpolation: {1000 * (time1 - time0):.2f}ms;"
+                  f"data-prepare: {1000 * (time2 - time1):.2f}ms; "
+                  f"network-inference: {1000 * (time3 - time2):.2f}ms; "
+                  f"post-process: {1000 * (time4 - time3):.2f}ms;"
+                  f"visualize-trajectory: {1000 * (time5 - time4):.2f}ms")
+        if self.verbose or (total_time > tolerance):
+            print(f"Average Time Consuming:"
+                  f"depth-interpolation: {1000 * self.time_interpolation / self.count:.2f}ms;"
+                  f"data-prepare: {1000 * self.time_prepare / self.count:.2f}ms; "
+                  f"network-inference: {1000 * self.time_forward / self.count:.2f}ms; "
+                  f"post-process: {1000 * self.time_process / self.count:.2f}ms;"
+                  f"visualize-trajectory: {1000 * self.time_visualize / self.count:.2f}ms")
 
     def warm_up(self):
         depth = torch.zeros((1, 1, self.height, self.width), dtype=torch.float32, device=self.device)
