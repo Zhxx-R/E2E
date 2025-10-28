@@ -2,7 +2,6 @@ import rospy
 import std_msgs.msg
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
-from cv_bridge import CvBridge
 from threading import Lock
 from sensor_msgs.msg import PointCloud2, PointField, Image
 from sensor_msgs import point_cloud2
@@ -46,7 +45,6 @@ class YopoNet:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # variables
-        # self.bridge = CvBridge()
         self.odom = Odometry()
         self.odom_init = False
         self.last_yaw = 0.0
@@ -73,6 +71,7 @@ class YopoNet:
         self.time_interpolation = 0.0
         self.time_visualize = 0.0
         self.count = 0
+        self.depth_fps = 30  # used only as processing time tolerance for printing logs
 
         # Load Network
         if self.use_trt:
@@ -334,22 +333,22 @@ class YopoNet:
         self.count = self.count + 1
 
         total_time = (time5 - time0) * 1000
-        tolerance = 30.0
+        tolerance = 1000.0 / self.depth_fps
         if total_time > tolerance:
-            rospy.logwarn(f"Warn: Processing time {(time5 - time0) * 1000:.2f} ms exceeds {tolerance} ms, may cause message lag!")
-            print(f"Current Time Consuming:"
-                  f"depth-interpolation: {1000 * (time1 - time0):.2f}ms;"
-                  f"data-prepare: {1000 * (time2 - time1):.2f}ms; "
-                  f"network-inference: {1000 * (time3 - time2):.2f}ms; "
-                  f"post-process: {1000 * (time4 - time3):.2f}ms;"
-                  f"visualize-trajectory: {1000 * (time5 - time4):.2f}ms")
+            rospy.logwarn(f"Warn: Processing time {(time5 - time0) * 1000:.2f} ms exceeds {tolerance:.2f} ms, may cause message lag!")
+            print(f"\033[34mCurrent Time Consuming:\033[0m "
+                  f"depth-interpolation: \033[32m{1000 * (time1 - time0):.2f} ms\033[0m; "
+                  f"data-prepare: \033[32m{1000 * (time2 - time1):.2f} ms\033[0m; "
+                  f"network-inference: \033[32m{1000 * (time3 - time2):.2f} ms\033[0m; "
+                  f"post-process: \033[32m{1000 * (time4 - time3):.2f} ms\033[0m; "
+                  f"visualize-trajectory: \033[32m{1000 * (time5 - time4):.2f} ms\033[0m")
         if self.verbose or (total_time > tolerance):
-            print(f"Average Time Consuming:"
-                  f"depth-interpolation: {1000 * self.time_interpolation / self.count:.2f}ms;"
-                  f"data-prepare: {1000 * self.time_prepare / self.count:.2f}ms; "
-                  f"network-inference: {1000 * self.time_forward / self.count:.2f}ms; "
-                  f"post-process: {1000 * self.time_process / self.count:.2f}ms;"
-                  f"visualize-trajectory: {1000 * self.time_visualize / self.count:.2f}ms")
+            print(f"\033[34mAverage Time Consuming:\033[0m "
+                  f"depth-interpolation: \033[32m{1000 * self.time_interpolation / self.count:.2f} ms\033[0m; "
+                  f"data-prepare: \033[32m{1000 * self.time_prepare / self.count:.2f} ms\033[0m; "
+                  f"network-inference: \033[32m{1000 * self.time_forward / self.count:.2f} ms\033[0m; "
+                  f"post-process: \033[32m{1000 * self.time_process / self.count:.2f} ms\033[0m; "
+                  f"visualize-trajectory: \033[32m{1000 * self.time_visualize / self.count:.2f} ms\033[0m")
 
     def warm_up(self):
         depth = torch.zeros((1, 1, self.height, self.width), dtype=torch.float32, device=self.device)
