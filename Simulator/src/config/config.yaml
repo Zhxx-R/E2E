@@ -4,7 +4,7 @@ depth_topic: "/depth_image"
 lidar_topic: "/lidar_points"
 
 render_depth: true
-depth_fps: 30
+depth_fps: 33          # odom 100hz, depth 33hz, 每3帧odom渲染一次
 
 render_lidar: true
 lidar_fps: 10

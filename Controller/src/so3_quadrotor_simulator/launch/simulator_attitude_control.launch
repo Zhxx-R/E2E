@@ -4,7 +4,7 @@
     <arg name="init_z" value="2.0"/> 
 
     <node pkg="so3_quadrotor_simulator" type="quadrotor_simulator_so3" name="quadrotor_simulator_so3" output="screen">
-        <param name="rate/odom" value="50.0"/>
+        <param name="rate/odom" value="100.0"/>
         <param name="simulator/init_state_x" value="$(arg init_x)"/>
         <param name="simulator/init_state_y" value="$(arg init_y)"/>
         <param name="simulator/init_state_z" value="$(arg init_z)"/>
