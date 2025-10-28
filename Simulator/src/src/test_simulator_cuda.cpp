@@ -234,8 +234,8 @@ void SensorSimulator::odomCallback(const nav_msgs::Odometry::ConstPtr& msg) {
     if (render_duration > depth_pub_duration || render_duration > lidar_pub_duration){
         // Performance reference: should take < 1 ms on 3060 GPU & Ubuntu 20.04
         ROS_WARN("Current Rendering time: %.2f ms, delay too much!", 1000 * render_duration.toSec());
-        std::cout << "Average Depth Rendering time: " << (depth_time / depth_count) * 1000 << " ms" << std::endl;
-        std::cout << "Average Lidar Rendering time: " << (lidar_time / lidar_count) * 1000 << " ms" << std::endl;
+        std::cout << "Average Depth Rendering time: " << (depth_time / (depth_count + 1e-8)) * 1000 << " ms" << std::endl;
+        std::cout << "Average Lidar Rendering time: " << (lidar_time / (lidar_count + 1e-8)) * 1000 << " ms" << std::endl;
     }
 }
 
