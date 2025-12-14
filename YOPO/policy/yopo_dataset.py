@@ -33,7 +33,7 @@ class YOPODataset(Dataset):
         # dataset
         base_dir = os.path.dirname(os.path.abspath(__file__))
         data_dir = os.path.join(base_dir, "../", cfg["dataset_path"])
-        self.img_list, self.map_idx, self.positions, self.quaternions = [], [], np.empty((0, 3), dtype=np.float32), np.empty((0, 4), dtype=np.float32)
+        self.img_list, self.map_idx, self.positions, self.quaternions = [], [], np.empty((0, 2), dtype=np.float32), np.empty((0, 3), dtype=np.float32)
 
         datafolders = [f.path for f in os.scandir(data_dir) if f.is_dir()]
         datafolders.sort(key=lambda x: int(os.path.basename(x)))
@@ -90,8 +90,8 @@ class YOPODataset(Dataset):
         vel_b, acc_b = self._get_random_state()
 
         # 3. generate random goal in front of the quadrotor.
-        q_wxyz = self.quaternions[item, :]  # q: wxyz
-        R_WB = R.from_quat([q_wxyz[1], q_wxyz[2], q_wxyz[3], q_wxyz[0]])
+        q_wxy = self.quaternions[item, :]  # q: wxyz
+        R_WB = R.from_quat([q_wxy[1], q_wxy[2], q_wxy[3], q_wxy[0]])
         euler_angles = R_WB.as_euler('ZYX', degrees=False)  # [yaw(z) pitch(y) roll(x)]
         R_wB = R.from_euler('ZYX', [0, euler_angles[1], euler_angles[2]], degrees=False)
         goal_w = self._get_random_goal()
@@ -104,7 +104,7 @@ class YOPODataset(Dataset):
 
     def _get_random_state(self):
         while True:
-            vel = self.vel_max * (self.v_mean + self.v_std * np.random.randn(3))
+            vel = self.vel_max * (self.v_mean + self.v_std * np.random.randn(2))
             right_skewed_vx = -1
             while right_skewed_vx < 0:
                 right_skewed_vx = self.vel_max * np.random.lognormal(mean=self.vx_lognorm_mean, sigma=self.vx_logmorm_sigma, size=None)
@@ -114,17 +114,17 @@ class YOPODataset(Dataset):
                 break
 
         while True:
-            acc = self.acc_max * (self.a_mean + self.a_std * np.random.randn(3))
+            acc = self.acc_max * (self.a_mean + self.a_std * np.random.randn(2))
             if np.linalg.norm(acc) < 1.2 * self.acc_max:  # avoid outliers
                 break
         return vel, acc
 
     def _get_random_goal(self):
-        goal_pitch_angle = np.random.normal(0.0, self.goal_pitch_std)
         goal_yaw_angle = np.random.normal(0.0, self.goal_yaw_std)
-        goal_pitch_angle, goal_yaw_angle = np.radians(goal_pitch_angle), np.radians(goal_yaw_angle)
-        goal_w_dir = np.array([np.cos(goal_yaw_angle) * np.cos(goal_pitch_angle),
-                               np.sin(goal_yaw_angle) * np.cos(goal_pitch_angle), np.sin(goal_pitch_angle)])
+        goal_yaw_angle = np.radians( np.radians(goal_yaw_angle))
+
+        goal_w_dir = np.array([np.cos(goal_yaw_angle) ,
+                               np.sin(goal_yaw_angle)])
         # 10% probability to generate a nearby goal (× goal_length is actual length)
         random_near = np.random.rand()
         if random_near < 0.1:
@@ -157,56 +157,56 @@ class YOPODataset(Dataset):
         print("-----------------------------------------------------")
 
     def plot_sample_distribution(self):
-        import matplotlib.pyplot as plt
-        # ===== 采样 =====
-        N = 10000
-        goals = np.array([self._get_random_goal() for _ in range(N)])
-        states = np.array([self._get_random_state() for _ in range(N)])
-        vels = np.stack([s[0] for s in states])
-        accs = np.stack([s[1] for s in states])
+            import matplotlib.pyplot as plt
+            # ===== 采样 =====
+            N = 10000
+            goals = np.array([self._get_random_goal() for _ in range(N)])
+            states = np.array([self._get_random_state() for _ in range(N)])
+            vels = np.stack([s[0] for s in states])
+            accs = np.stack([s[1] for s in states])
 
-        x, y, z = goals[:, 0], goals[:, 1], goals[:, 2]
-        yaw = np.degrees(np.arctan2(y, x))  # 水平角 [-180, 180]
-        pitch = np.degrees(np.arctan2(z, np.sqrt(x ** 2 + y ** 2)))  # 垂直角 [-90, 90]
+            x, y, z = goals[:, 0], goals[:, 1], goals[:, 2]
+            yaw = np.degrees(np.arctan2(y, x))  # 水平角 [-180, 180]
+            pitch = np.degrees(np.arctan2(z, np.sqrt(x ** 2 + y ** 2)))  # 垂直角 [-90, 90]
 
-        fig, axs = plt.subplots(3, 3, figsize=(15, 10))
+            fig, axs = plt.subplots(3, 3, figsize=(15, 10))
 
-        # Goal方向角分布
-        axs[0, 0].hist(yaw, bins=180)
-        axs[0, 0].set_title("Goal Yaw Distribution")
-        axs[0, 0].set_xlabel("Yaw (deg)")
-        axs[0, 0].set_xlim([-60, 60])
-        axs[0, 0].grid(True)
+            # Goal方向角分布
+            axs[0, 0].hist(yaw, bins=180)
+            axs[0, 0].set_title("Goal Yaw Distribution")
+            axs[0, 0].set_xlabel("Yaw (deg)")
+            axs[0, 0].set_xlim([-60, 60])
+            axs[0, 0].grid(True)
 
-        axs[0, 1].hist(pitch, bins=90)
-        axs[0, 1].set_title("Goal Pitch Distribution")
-        axs[0, 1].set_xlabel("Pitch (deg)")
-        axs[0, 1].set_xlim([-60, 60])
-        axs[0, 1].grid(True)
+            axs[0, 1].hist(pitch, bins=90)
+            axs[0, 1].set_title("Goal Pitch Distribution")
+            axs[0, 1].set_xlabel("Pitch (deg)")
+            axs[0, 1].set_xlim([-60, 60])
+            axs[0, 1].grid(True)
 
-        # Goal往图像投影分布(未考虑机体旋转)
-        axs[0, 2].scatter(yaw, pitch, s=2, alpha=0.3)
-        axs[0, 2].set_title("Goal Distribution in Image")
-        axs[0, 2].set_xlabel("Yaw (deg)")
-        axs[0, 2].set_ylabel("Pitch (deg)")
-        axs[0, 2].set_xlim([-45, 45])
-        axs[0, 2].set_ylim([-30, 30])
-        axs[0, 2].grid(True)
+            # Goal往图像投影分布(未考虑机体旋转)
+            axs[0, 2].scatter(yaw, pitch, s=2, alpha=0.3)
+            axs[0, 2].set_title("Goal Distribution in Image")
+            axs[0, 2].set_xlabel("Yaw (deg)")
+            axs[0, 2].set_ylabel("Pitch (deg)")
+            axs[0, 2].set_xlim([-45, 45])
+            axs[0, 2].set_ylim([-30, 30])
+            axs[0, 2].grid(True)
 
-        # Velocity分布
-        for i, name in enumerate(['Vx', 'Vy', 'Vz']):
-            axs[1, i].hist(vels[:, i], bins=100)
-            axs[1, i].set_title(f"Velocity {name}")
-            axs[1, i].grid(True)
+            # Velocity分布
+            for i, name in enumerate(['Vx', 'Vy', 'Vz']):
+                axs[1, i].hist(vels[:, i], bins=100)
+                axs[1, i].set_title(f"Velocity {name}")
+                axs[1, i].grid(True)
 
-        # Acceleration分布
-        for i, name in enumerate(['Ax', 'Ay', 'Az']):
-            axs[2, i].hist(accs[:, i], bins=100)
-            axs[2, i].set_title(f"Acceleration {name}")
-            axs[2, i].grid(True)
+            # Acceleration分布
+            for i, name in enumerate(['Ax', 'Ay', 'Az']):
+                axs[2, i].hist(accs[:, i], bins=100)
+                axs[2, i].set_title(f"Acceleration {name}")
+                axs[2, i].grid(True)
 
-        plt.tight_layout()
-        plt.show()
+            plt.tight_layout()
+            plt.show()
 
 
 if __name__ == '__main__':

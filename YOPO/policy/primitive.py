@@ -94,6 +94,12 @@ class LatticePrimitive(LatticeParam):
             return self.lattice_angle_node[id, 0], self.lattice_angle_node[id, 1]  # yaw, pitch
         else:
             return self.lattice_angle_node[:, 0], self.lattice_angle_node[:, 1]  # yaw, pitch
+    
+    def get_yawLattice(self, id=None):
+        if id is not None:
+            return self.lattice_angle_node[id, 0] # yaw
+        else:
+            return self.lattice_angle_node[:, 0]  # yaw
 
     def getRotation(self, id=None):
         if id is not None:

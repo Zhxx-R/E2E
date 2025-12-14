@@ -36,14 +36,32 @@ class YOPOLoss(nn.Module):
         print("-------------------------")
 
     def qp_generation(self):
-        # 论文中的映射矩阵
+        # 论文中的映射矩阵 d = A @ c：c=[c0​,c1​,c2​,c3​,c4​,c5​]T
         A = th.zeros((6, 6))
         for i in range(3):
             A[2 * i, i] = math.factorial(i)
             for j in range(i, 6):
                 A[2 * i + 1, j] = math.factorial(j) / math.factorial(j - i) * (self.sgm_time ** (j - i))
+        #位置 p(t)=c0​+c1​t+c2​t2+c3​t3+c4​t4+c5​t5
 
-        # H海森矩阵，论文中的矩阵Q
+        # 速度 v(t)=c1​+2c2​t+3c3​t2+4c4​t3+5c5​t4
+
+        # 加速 a(t)=2c2​+6c3​t+12c4​t2+20c5​t3
+
+        # tensor([[ 1.,  0.,  0.,  0.,  0.,  0.],                   p(0)
+                # [ 1.,  1.,  1.,  1.,  1.,  1.],   * t(j-i)        p(t)
+                # [ 0.,  1.,  0.,  0.,  0.,  0.],
+                # [ 0.,  1.,  2.,  3.,  4.,  5.],
+                # [ 0.,  0.,  2.,  0.,  0.,  0.],
+                # [ 0.,  0.,  2.,  6., 12., 20.]])
+
+        # tensor([[  0.,   0.,   0.,   0.,   0.,   0.],
+        #         [  0.,   0.,   0.,   0.,   0.,   0.],
+        #         [  0.,   0.,   0.,   0.,   0.,   0.],   * t(j+i-5) 
+        #         [  0.,   0.,   0.,  36.,  72., 120.],
+        #         [  0.,   0.,   0.,  72., 192., 360.],
+        #         [  0.,   0.,   0., 120., 360., 720.]])
+        # H海森矩阵，论文中的矩阵Q # Minimum Jerk 的积分项公式
         H = th.zeros((6, 6))
         for i in range(3, 6):
             for j in range(3, 6):
@@ -52,7 +70,9 @@ class YOPOLoss(nn.Module):
         return self.stack_opt_dep(A, H)
 
     def stack_opt_dep(self, A, Q):
+        # 矩阵 Ct (和 _C)：调序矩阵  dsorted​=[p0​,v0​,a0​,pT​,vT​,aT​]
         Ct = th.zeros((6, 6))
+        # 在特定位置赋值为1 行 and 列
         Ct[[0, 2, 4, 1, 3, 5], [0, 1, 2, 3, 4, 5]] = 1
 
         _C = th.transpose(Ct, 0, 1)
@@ -61,9 +81,9 @@ class YOPOLoss(nn.Module):
 
         B_T = th.transpose(B, 0, 1)
 
-        _L = B @ Ct
+        _L = B @ Ct  #c = _L * d sort  _L - > M-1C -> safety_LP
 
-        _R = _C @ (B_T) @ Q @ B @ Ct
+        _R = _C @ (B_T) @ Q @ B @ Ct     #loss: CT M-T Q M-1 C   左右* d = j_smooth
 
         return _C, B, _L, _R
 
@@ -84,19 +104,20 @@ class YOPOLoss(nn.Module):
     def forward(self, state, prediction, goal, map_id):
         """
         Args:
-            prediction: (batch_size, 3, 3) → [px, py, pz; vx, vy, vz; ax, ay, az] in world frame
-            state: (batch_size, 3, 3) → [px, py, pz; vx, vy, vz; ax, ay, az] in world frame
+
+            prediction: (batch_size, 3, 2) → [px, py; vx, vy; ax, ay] in world frame
+            state: (batch_size, 3, 2) → [px, py; vx, vy; ax, ay] in world frame
             map_id: (batch_size) which ESDF map to query
 
         Returns:
             cost: (batch_size) → weighted cost
         """
-        # Fixed part: initial pos, vel, acc → (batch_size, 3, 3) [px, vx, ax; py, vy, ay; pz, vz, az]
+        # Fixed part: initial pos, vel, acc → (batch_size, 2，3) [px, vx, ax; py, vy, ay]
         Df = state.permute(0, 2, 1)
 
-        # Decision parameters (local frame) → (batch_size, 3, 3) [px, vx, ax; py, vy, ay; pz, vz, az]
+        # Decision parameters (local frame) → (batch_size, 2， 3) [px, vx, ax; py, vy, ay] 交换维度
         Dp = prediction.permute(0, 2, 1)
-
+       
         smoothness_cost = th.tensor(0.0, device=self.device, requires_grad=True)
         safety_cost = th.tensor(0.0, device=self.device, requires_grad=True)
         goal_cost = th.tensor(0.0, device=self.device, requires_grad=True)

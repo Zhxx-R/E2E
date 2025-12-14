@@ -1,51 +1,62 @@
+# ==========================================
+# 2D UGV / Ground Robot Configuration
+# ==========================================
+
 # IMPORTANT: velocity in testing (modifiable)
-velocity: 6.0
+# 2D 地面移动通常较慢，建议 1.0 - 2.0
+velocity: 2.0
 
-# IMPORTANT: vel_max and acc_max in training
-# not the actual values in testing, ensure consistency between testing and training, please refer to ../policy/primitive.py
-vel_max_train: 6.0
-acc_max_train: 6.0
+vel_max_train: 2.0
+acc_max_train: 1.0
 
-# IMPORTANT: weight of costs for unit speed (can be visualized in tensorboard)
-wg: 0.12   # guidance
-ws: 10.0   # smoothness
+# IMPORTANT: weight of costs
+wg: 0.12   # guidance (目标引导权重)
+ws: 10.0    # smoothness (2D 运动通常较平滑，可以适当降低平滑权重，原10.0)
 wc: 0.1    # collision
 
-# dataset: set image_size = primitive_num × downsampling_factor (×32 for ResNet-18) in each axis
-dataset_path: "../dataset"
-image_height: 96
+dataset_path: "TrainingData" # 修改为你实际的路径
+image_height: 32  
 image_width: 160
 
-# trajectory and primitive param (Note: traj_time = 2 * radio / vel_max) (can be visualized in rviz)
-horizon_num: 5
-vertical_num: 3
-horizon_camera_fov: 90.0
-vertical_camera_fov: 60.0
-horizon_anchor_fov: 30.0
-vertical_anchor_fov: 30.0
-radio_range: 5.0    # planning horizon: 2 * radio_range
-radio_num: 1        # only support 1 currently
+# trajectory and primitive param
+horizon_num: 5      # 水平方向保留 5 条基元
+vertical_num: 1    
+horizon_camera_fov: 89       # 由 160:90 和 Vert 58 算出   
+vertical_camera_fov: 58.0
+horizon_anchor_fov: 60.0 # 稍微增大，覆盖更宽的地面搜索范围  < 89   
+vertical_anchor_fov: 0.0 # 2D 不需要垂直维度的 anchor
+radio_range: 5.0    # 规划距离
+radio_num: 1
 
 # safety penalties
-d0: 1.2
-r: 0.6
+# 地面小车体积通常比无人机安全包络小，可以适当减小
+d0: 1.5
+r: 0.2
 
-# distribution for unit state sampling (can be visualized by 'python ./policy/yopo_dataset.py')
-vx_mean_unit: 0.4
-vy_mean_unit: 0.0
-vz_mean_unit: 0.0
-vx_std_unit: 2.0
-vy_std_unit: 0.45
-vz_std_unit: 0.3
+
+# Distribution for unit state sampling
+vx_mean_unit: 0.2   
+vx_std_unit: 1.2   
+
+vy_mean_unit: 0.0   
+vy_std_unit: 0.4
+
+vz_mean_unit: 0.0   # 2D 地面，Z轴锁死
+vz_std_unit: 0.0
+
+# 2. 加速度采样分布
 ax_mean_unit: 0.0
-ay_mean_unit: 0.0
-az_mean_unit: 0.0
-ax_std_unit: 0.5
-ay_std_unit: 0.5
-az_std_unit: 0.3
-goal_pitch_std: 10.0  # clip goal_length to: 2 * radio_range; 10% probability [0, 2 * radio_range]
-goal_yaw_std: 20.0
+ax_std_unit: 0.4
 
-# extend the map to avoid trajectory exceeding bounds (especially in z-axis) and treating the sky outside the map as obstacle
-map_expand_min: [0, 0, 0.2]
-map_expand_max: [0, 0, 6.0]
+ay_mean_unit: 0.0
+ay_std_unit: 0.4
+az_std_unit: 0.0
+
+goal_pitch_std: 0.0 
+goal_yaw_std: 20.0  
+
+# # extend the map bounds
+# # 压缩 Z 轴范围，防止把天花板或地面当成障碍物
+# map_expand_min: [-100, -100, -0.5] # 根据实际地图大小调整 XY
+# map_expand_max: [100, 100, 0.5]    # Z轴只留给车身高度
+# resize 160 32

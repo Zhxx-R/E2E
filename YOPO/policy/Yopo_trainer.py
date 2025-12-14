@@ -13,73 +13,15 @@ from torch.utils.tensorboard.writer import SummaryWriter
 from config.config import cfg
 from loss.loss_function import YOPOLoss
 from policy.yopo_network import YopoNetwork
-from policy.rgb_yopo_network import CMCL_YOPO_Network
-from data.Yopo_dataset import YOPODataset
+from policy.yopo_dataset import YOPODataset
 from policy.state_transform import *
-
-import torch
-
-def load_yopo_pretrain_to_3ch(model, checkpoint_path, device):
-    """
-    修正版：适配 .cnn 属性名 “单通道 YOPO 预训练模型”到“3通道 Depth Backbone”的迁移学习加载。
-    Mapping: image_backbone.cnn.* -> depth_backbone.cnn.*
-    Strategy: conv1.weight / 3.0
-    """
-    print(f"Loading checkpoint: {checkpoint_path}")
-    try:
-        checkpoint = torch.load(checkpoint_path, map_location=device)
-        state_dict = checkpoint['state_dict'] if 'state_dict' in checkpoint else checkpoint
-        
-        model_dict = model.state_dict()
-        new_state_dict = {}
-        loaded_layers = []
-
-        for k, v in state_dict.items():
-            # 过滤 Backbone
-            if not k.startswith("image_backbone.cnn."):
-                continue
-            
-            # 现在的逻辑：image_backbone.cnn -> depth_backbone.cnn (对)
-            new_key = k.replace("image_backbone.", "depth_backbone.")
-            
-            if new_key in model_dict:
-                # Case A: Conv1 (1通道 -> 3通道)
-                if "conv1.weight" in k and v.shape[1] == 1 and model_dict[new_key].shape[1] == 3:
-                    print(f"⚠️ Adapting Conv1: {k} {v.shape} -> {new_key} [3-channel]")
-                    adapted_weight = v.repeat(1, 3, 1, 1) / 3.0
-                    new_state_dict[new_key] = adapted_weight
-                    loaded_layers.append(new_key)
-                
-                # Case B: 其他层
-                elif v.shape == model_dict[new_key].shape:
-                    new_state_dict[new_key] = v
-                    loaded_layers.append(new_key)
-                else:
-                    print(f"❌ Shape Mismatch: {k} vs {new_key}")
-
-        # 执行加载 false
-        # 如果权重文件里有，但网络里没有：忽略，不报错。
-        # 如果网络里有，但权重文件里没有（比如MLP Head）：保持随机初始化，不报错
-        missing, unexpected = model.load_state_dict(new_state_dict, strict=False)
-        
-        # 验证: 检查 depth_backbone.cnn 开头的层是否在 missing 列表里
-        # 如果有，说明没加载全
-        real_missing = [k for k in missing if k.startswith("depth_backbone.cnn.")]
-        if len(real_missing) > 0:
-            print(f"❌ Warning: Missing layers:\n{real_missing[:3]}...")
-        else:
-            print("✅ All backbone layers loaded perfectly!")
-
-    except Exception as e:
-        print(f"❌ Fatal Error: {e}")
 
 
 class YopoTrainer:
     def __init__(
             self,
             learning_rate=0.001,
-            batch_size = 1,
-            # batch_size=32,
+            batch_size=32,
             loss_weight=[],
             tensorboard_path=None,
             checkpoint_path=None,
@@ -99,16 +41,17 @@ class YopoTrainer:
 
         # network
         print("Loading network...")
-        self.policy = CMCL_YOPO_Network()
+        self.policy = YopoNetwork()
         self.policy = self.policy.to(self.device)
-        if checkpoint_path is not None and os.path.exists(checkpoint_path):
-            # 使用我们写的适配函数
-            load_yopo_pretrain_to_3ch(self.policy, checkpoint_path, self.device)
-        else:
-            print("No checkpoint found or provided. Training from scratch.")
+        try:
+            state_dict = torch.load(checkpoint_path, weights_only=True)
+            self.policy.load_state_dict(state_dict)
+            print("Checkpoint ", checkpoint_path, " loaded successfully")
+        except FileNotFoundError:
+            print("Training from scratch")
 
         # loss
-        self.yopo_loss = YOPOLoss()  #changed
+        self.yopo_loss = YOPOLoss()
 
         # optimizer
         self.optimizer = torch.optim.AdamW(self.policy.parameters(), lr=learning_rate, fused=True)
@@ -120,9 +63,6 @@ class YopoTrainer:
         self.val_dataloader = DataLoader(YOPODataset(mode='valid'), batch_size=self.batch_size, shuffle=False,
                                          num_workers=4, pin_memory=True)
         print("Dataset Loaded!")
-
-
-
 
     def train(self, epoch, save_interval=None):
         with self.progress_log:
@@ -143,20 +83,12 @@ class YopoTrainer:
         one_epoch_progress = self.progress_log.add_task(f"Epoch: {epoch}", total=len(self.train_dataloader))
         inspect_interval = max(1, len(self.train_dataloader) // 16)
         traj_losses, score_losses, smooth_losses, safety_losses, goal_losses, start_time = [], [], [], [], [], time.time()
-        for step, batch in enumerate(self.train_dataloader):  # obs: body frame
-        
-            depth = batch['depth']
-            pos = batch['pos_w']      
-            rot = batch['rot_w']      
-            obs_b = batch['obs']
-            map_meta = batch['map_meta']
-            map_id = batch['map_id']
-            # change to test
-            # if depth.shape[0] != self.batch_size:  continue  # batch size == number of env
+        for step, (depth, pos, rot, obs_b, map_id) in enumerate(self.train_dataloader):  # obs: body frame
+            if depth.shape[0] != self.batch_size:  continue  # batch size == number of env
 
             self.optimizer.zero_grad()
-            # already changed
-            trajectory_loss, score_loss, smooth_cost, safety_cost, goal_cost = self.forward_and_compute_loss(depth, pos, rot, obs_b, map_meta,map_id)
+
+            trajectory_loss, score_loss, smooth_cost, safety_cost, goal_cost = self.forward_and_compute_loss(depth, pos, rot, obs_b, map_id)
 
             loss = self.loss_weight[0] * trajectory_loss + self.loss_weight[1] * score_loss
 
@@ -186,21 +118,15 @@ class YopoTrainer:
             self.progress_log.update(total_progress, advance=1 / len(self.train_dataloader))
 
         self.progress_log.remove_task(one_epoch_progress)
-    # map_id
+
     @torch.inference_mode()
     def eval_one_epoch(self, epoch: int):
         one_epoch_progress = self.progress_log.add_task(f"Eval: {epoch}", total=len(self.val_dataloader))
         traj_losses, score_losses = [], []
-        for step, batch in enumerate(self.val_dataloader):  # obs: body frame
-            depth = batch['depth']
-            pos = batch['pos_w']      # 注意 Dataset 里定义的 key 是 pos_w
-            rot = batch['rot_w']      # 注意 key 是 rot_w
-            obs_b = batch['obs']
-            map_meta = batch['map_meta']
-            map_id = batch['map_id']
+        for step, (depth, pos, rot, obs_b, map_id) in enumerate(self.val_dataloader):  # obs: body frame
             if depth.shape[0] != self.batch_size:  continue  # batch size == num of env
 
-            trajectory_loss, score_loss, _, _, _ = self.forward_and_compute_loss(depth, pos, rot, obs_b, map_meta,map_id)
+            trajectory_loss, score_loss, _, _, _ = self.forward_and_compute_loss(depth, pos, rot, obs_b, map_id)
 
             traj_losses.append(self.loss_weight[0] * trajectory_loss.item())
             score_losses.append(self.loss_weight[1] * score_loss.item())
@@ -211,35 +137,40 @@ class YopoTrainer:
         self.tensorboard_log.add_scalar("Eval/ScoreLoss", np.mean(score_losses), epoch)
         self.progress_log.remove_task(one_epoch_progress)
 
-    #all 2d
-    def forward_and_compute_loss(self, depth, pos, rot, obs_b,map_meta, map_id): 
-        depth, pos, rot, obs_b, map_meta, map_id = [x.to(self.device) for x in [depth, pos, rot, obs_b,map_meta, map_id]]
+    def forward_and_compute_loss(self, depth, pos, rot, obs_b, map_id):
+        depth, pos, rot, obs_b, map_id = [x.to(self.device) for x in [depth, pos, rot, obs_b, map_id]]
 
-        # 1. pre-process  no-normalization obs::vel & acc & goal are in body frame |||| goal & vel & acc 
-        goal_w, start_vel_w, start_acc_w = state_body2world(pos, rot, obs_b[:, 4:6], obs_b[:, 0:2], obs_b[:, 2:4])
-        start_state_w = torch.stack([pos, start_vel_w, start_acc_w], dim=1) 
+        # 1. pre-process
+        goal_w, start_vel_w, start_acc_w = state_body2world(pos, rot, obs_b[:, 6:9], obs_b[:, 0:3], obs_b[:, 3:6])
+        start_state_w = torch.stack([pos, start_vel_w, start_acc_w], dim=1)
 
-        # 2. forward propagation obs:[B ,6] output: [B ,6] [B,1]
+        # 2. forward propagation
         endstate, score = self.policy.inference(depth, obs_b)
 
         # 3. post-process [B, V, H, 9] -> [B*V*H, 9]
+        endstate_flat = endstate.permute(0, 2, 3, 1).reshape(self.batch_size * self.traj_num, 9)
+        score_flat = score.reshape(self.batch_size * self.traj_num)
 
-       
+        pos_expanded = pos.repeat_interleave(self.traj_num, dim=0)  # [B*V*H, 3]
+        rot_expanded = rot.repeat_interleave(self.traj_num, dim=0)  # [B*V*H, 3, 3]
+        start_state_w = start_state_w.repeat_interleave(self.traj_num, dim=0)  # [B*V*H, 3, 3]
+        goal_w = goal_w.repeat_interleave(self.traj_num, dim=0)  # [B*V*H, 3]
+
+        # [B*V*H, 3] [B*V*H, 3] [B*V*H, 3]
         end_pos_w, end_vel_w, end_acc_w = state_body2world(
-            pos,  # [B, 2]
-            rot,
-            endstate[:, 0:2],
-            endstate[:, 2:4],
-            endstate[:, 4:6]
+            pos_expanded, rot_expanded,
+            endstate_flat[:, 0:3],
+            endstate_flat[:, 3:6],
+            endstate_flat[:, 6:9]
         )
-        # [B, 2, 3]: [px, py; vx, vy; ax, ay]
+        # [B*V*H, 3, 3]: [px, py, pz; vx, vy, vz; ax, ay, az]
         end_state_w = torch.stack([end_pos_w, end_vel_w, end_acc_w], dim=1)
 
         smooth_cost, safety_cost, goal_cost = self.yopo_loss(start_state_w, end_state_w, goal_w, map_id)
         trajectory_loss = (smooth_cost + safety_cost + goal_cost).mean()
 
         score_label = (smooth_cost + safety_cost + goal_cost).clone().detach()
-        score_loss = F.smooth_l1_loss(score.squeeze(), score_label)
+        score_loss = F.smooth_l1_loss(score_flat, score_label)
         return trajectory_loss, score_loss, smooth_cost.mean(), safety_cost.mean(), goal_cost.mean()
 
     def save_model(self):

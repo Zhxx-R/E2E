@@ -49,6 +49,39 @@ class StateTransform:
 
         endstate = endstate.permute(0, 2, 1).reshape(B, 9, V, H)  # [B, 9, 3, 5]
         return endstate
+    
+    ##add
+    def pred_to_endstate_2d(self, endstate_pred: torch.Tensor) -> torch.Tensor:
+        """
+            Transform the predicted state to the body frame (Original prediction →  Body frame).
+            endstate_pred: [batch; px py  vx vy  ax ay ; ]
+            :return [batch; delta_yaw delta_r vx vy ax ay ; ] in body frame
+        """
+        # changed: endstate_pred: B * 6
+        B = endstate_pred.shape[0]
+
+        # unnormalize yaw  
+        max_yaw_rad = (self.lattice_primitive.horizon_fov / 2.0) * (3.1415926 / 180.0)
+        delta_yaw = endstate_pred[:, 0] * max_yaw_rad  # [B]  
+
+        # 2倍的range
+        radio = (endstate_pred[:, 1] + 1.0) * self.lattice_primitive.radio_range
+
+        final_x = torch.cos(delta_yaw) * radio
+        final_y = torch.sin(delta_yaw) * radio
+        final_position = torch.stack([final_x, final_y], dim=-1)  # [B, 2]
+
+
+        # vel / acc
+        endstate_vp = endstate_pred[:, 2:4] * self.lattice_primitive.vel_max  # [B, 2]
+        endstate_ap = endstate_pred[:, 4:6] * self.lattice_primitive.acc_max  # [B, 2]
+
+
+       
+        endstate = torch.cat([final_position , endstate_vp, endstate_ap], dim=-1)  # [B, 6]
+
+        
+        return endstate
 
     def pred_to_endstate_cpu(self, endstate_pred: np.ndarray, lattice_id: torch.Tensor) -> np.ndarray:
         """
@@ -108,15 +141,15 @@ class StateTransform:
         return vel_acc
 
     def normalize_obs(self, vel_acc_goal):
-        vel_acc_goal[:, 0:3] = vel_acc_goal[:, 0:3] / self.lattice_primitive.vel_max
-        vel_acc_goal[:, 3:6] = vel_acc_goal[:, 3:6] / self.lattice_primitive.acc_max
+        vel_acc_goal[:, 0:2] = vel_acc_goal[:, 0:2] / self.lattice_primitive.vel_max
+        vel_acc_goal[:, 2:4] = vel_acc_goal[:, 2:4] / self.lattice_primitive.acc_max
 
         # Clamp the goal direction to unit length
-        goal_norm = vel_acc_goal[:, 6:9].norm(dim=1, keepdim=True)
-        vel_acc_goal[:, 6:9] = vel_acc_goal[:, 6:9] / goal_norm.clamp(min=self.goal_length)
+        goal_norm = vel_acc_goal[:, 4:6].norm(dim=1, keepdim=True)
+        vel_acc_goal[:, 4:6] = vel_acc_goal[:, 4:6] / goal_norm.clamp(min=self.goal_length)
         return vel_acc_goal
 
-
+# 2d
 def rotate_body2world(rot_wb, pos_b):
     """
     Rotate pos_b from body frame to world frame using quaternion q_wb.

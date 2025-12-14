@@ -31,17 +31,16 @@ if __name__ == "__main__":
     # save the configuration and other files
     log_dir = os.path.dirname(os.path.abspath(__file__)) + "/saved"
     os.makedirs(log_dir, exist_ok=True)
-    checkpoint_path = log_dir + "/YOPO_{}/epoch{}.pth".format(args.trial, args.epoch) if args.pretrained else ""
-
+    checkpoint_path = "/home/zxx/YOPO-main/YOPO/YOPO/saved/YOPO_1/epoch501.pth"
+    print(checkpoint_path)
     trainer = YopoTrainer(
         learning_rate=1.5e-4,
-        batch_size=16,
+        batch_size=32,
         loss_weight=[1.0, 1.0],
         tensorboard_path=log_dir,
         checkpoint_path=checkpoint_path,
         save_on_exit=True,
     )
-
-    trainer.train(epoch=50)
+    trainer.train(epoch=49)
 
     print("Run YOPO Finish!")

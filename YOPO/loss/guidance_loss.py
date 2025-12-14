@@ -12,8 +12,8 @@ class GuidanceLoss(nn.Module):
     def forward(self, Df, Dp, goal):
         """
         Args:
-            Dp: decision parameters: (batch_size, 3, 3) → [px, vx, ax; py, vy, ay; pz, vz, az]
-            Df: fixed parameters: (batch_size, 3, 3) → [px, vx, ax; py, vy, ay; pz, vz, az]
+            Dp: decision parameters: (batch_size, 2, 3) → [px, vx, ax; py, vy, ay]
+            Df: fixed parameters: (batch_size, 2, 3) → [px, vx, ax; py, vy, ay]
             goal: (batch_size, 3)
         Returns:
             guidance_loss: (batch_size) → guidance loss
@@ -23,8 +23,8 @@ class GuidanceLoss(nn.Module):
         cur_pos = Df[:, :, 0]
         end_pos = Dp[:, :, 0]
 
-        traj_dir = end_pos - cur_pos  # [B, 3]
-        goal_dir = goal - cur_pos  # [B, 3]
+        traj_dir = end_pos - cur_pos  # [B, 2]
+        goal_dir = goal - cur_pos  # [B, 2]
 
         guidance_loss = self.distance_loss(traj_dir, goal_dir)
         # guidance_loss = self.similarity_loss(traj_dir, goal_dir)
@@ -39,7 +39,7 @@ class GuidanceLoss(nn.Module):
                 closer to the goal is preferred.
         Straighter flight, but slightly inferior to the similarity cost in flight speed.
         """
-        l1_distance = F.smooth_l1_loss(traj_dir, goal_dir, reduction='none')  # shape: (B, 3)
+        l1_distance = F.smooth_l1_loss(traj_dir, goal_dir, reduction='none')  # shape: (B, 2)
         l1_distance = l1_distance.sum(dim=1)  # (B)
         return l1_distance
 
