@@ -1,6 +1,11 @@
 
 # You Only Plan Once
 
+
+# USE train_yopo.py to train the model.
+
+
+
 Original Paper: [You Only Plan Once: A Learning-Based One-Stage Planner With Guidance Learning](https://ieeexplore.ieee.org/document/10528860)
 
 Improvements and Applications: [YOPOv2-Tracker: An End-to-End Agile Tracking and Navigation Framework from Perception to Action](https://arxiv.org/html/2505.06923v1)
